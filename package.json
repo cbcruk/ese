@@ -1,0 +1,48 @@
+{
+  "name": "ese",
+  "version": "0.1.0",
+  "description": "Fuzzy emoji search engine with Levenshtein matching and Korean choseong support",
+  "keywords": [
+    "choseong",
+    "emoji",
+    "fuzzy",
+    "korean",
+    "levenshtein",
+    "search"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist/",
+    "data/"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build:index": "node scripts/build-index.ts",
+    "build": "pnpm build:index && tsc",
+    "prepublishOnly": "pnpm build",
+    "test": "pnpm build:index && vitest run",
+    "bench": "pnpm build:index && vitest bench --run",
+    "lint": "oxlint src scripts tests",
+    "lint:fix": "oxlint src scripts tests --fix",
+    "format": "oxfmt src scripts tests",
+    "format:check": "oxfmt src scripts tests --check"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "emojilib": "^4.0.0",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.62.0",
+    "typescript": "^5.8.0",
+    "unicode-emoji-json": "^0.7.0",
+    "vitest": "^3.0.0"
+  }
+}
