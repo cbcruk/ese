@@ -1,17 +1,6 @@
-// Build-time only. The runtime index has choseong variants pre-expanded,
-// so src/ doesn't need this code.
-//
-// 빌드 타임 전용. 런타임 인덱스에는 초성 변형이 미리 펼쳐져 있으므로 src/
-// 에는 이 코드가 필요 없음.
-
 /**
  * Unicode code-point boundaries for Hangul.
  * (한글 관련 Unicode 코드포인트 경계값.)
- *
- * `as const` over `enum` so the script stays compatible with Node's
- * type-stripping execution (`node scripts/build-index.ts`).
- *
- * `enum`이 아닌 `as const` — Node의 type stripping 실행과 호환 유지.
  */
 const HangulCodePoint = {
   SyllableBase: 0xac00,
@@ -19,6 +8,26 @@ const HangulCodePoint = {
   CompatJamoBase: 0x3130,
   CompatJamoEnd: 0x318f,
 } as const
+
+/**
+ * Returns `true` if the string contains any Hangul compatibility jamo
+ * (U+3130–U+318F) — the standalone consonants/vowels users type for
+ * choseong search (e.g. `ㅅ`, `ㄱ`). A fast pre-check for whether a query
+ * needs choseong-variant matching.
+ *
+ * 문자열에 한글 호환 자모(U+3130–U+318F)가 포함되어 있으면 `true`. 사용자가
+ * 초성 검색용으로 입력하는 단독 자음/모음(예: `ㅅ`, `ㄱ`). 쿼리에 초성
+ * 변형 매칭이 필요한지 빠르게 사전 판단.
+ */
+export function containsCompatJamo(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const cp = s.charCodeAt(i)
+    if (cp >= HangulCodePoint.CompatJamoBase && cp <= HangulCodePoint.CompatJamoEnd) {
+      return true
+    }
+  }
+  return false
+}
 
 const JUNGSEONG_COUNT = 21
 const JONGSEONG_COUNT = 28

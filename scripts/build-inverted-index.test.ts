@@ -74,7 +74,7 @@ describe('buildInvertedIndex', () => {
     expect(index.postings[appleIdx]).toEqual([0])
   })
 
-  test('Korean keywords are indexed alongside their choseong variants', () => {
+  test('Korean keywords are indexed; choseong variants are NOT pre-expanded', () => {
     const inputs = makeInputs({
       emojilib: { '🍎': [] },
       koKeywords: { '🍎': ['사과'] },
@@ -83,8 +83,9 @@ describe('buildInvertedIndex', () => {
     const index = buildInvertedIndex(inputs, table)
 
     expect(index.keywords).toContain('사과')
-    expect(index.keywords).toContain('ㅅㄱ')
-    expect(index.keywords).toContain('사ㄱ')
+    // Variants are expanded at runtime by SearchCore, not at build time.
+    expect(index.keywords).not.toContain('ㅅㄱ')
+    expect(index.keywords).not.toContain('사ㄱ')
   })
 
   test('Korean keywords for emojis missing in emojilib are silently skipped', () => {

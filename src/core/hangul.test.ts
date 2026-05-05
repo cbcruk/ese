@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { generateVariants } from './hangul.ts'
+import { containsCompatJamo, generateVariants } from './hangul.ts'
 
 describe('generateVariants', () => {
   test('empty string returns empty array', () => {
@@ -46,5 +46,32 @@ describe('generateVariants', () => {
     const variants = generateVariants('사과')
     const unique = new Set(variants)
     expect(variants.length).toBe(unique.size)
+  })
+})
+
+describe('containsCompatJamo', () => {
+  test('empty string returns false', () => {
+    expect(containsCompatJamo('')).toBe(false)
+  })
+
+  test('pure ASCII returns false', () => {
+    expect(containsCompatJamo('apple')).toBe(false)
+  })
+
+  test('completed Hangul syllables alone return false', () => {
+    // 사과 is composed of syllables (U+C0AC, U+ACFC), NOT compat jamo.
+    expect(containsCompatJamo('사과')).toBe(false)
+  })
+
+  test('pure choseong returns true', () => {
+    expect(containsCompatJamo('ㅅㄱ')).toBe(true)
+  })
+
+  test('mixed syllable + jamo returns true', () => {
+    expect(containsCompatJamo('사ㄱ')).toBe(true)
+  })
+
+  test('single jamo returns true', () => {
+    expect(containsCompatJamo('ㅅ')).toBe(true)
   })
 })

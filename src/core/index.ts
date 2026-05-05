@@ -1,4 +1,5 @@
-import { buildIndex, type SearchIndex } from './builder.js'
+import { buildIndex, expandChoseongVariants, type SearchIndex } from './builder.js'
+import { containsCompatJamo } from './hangul.js'
 import { levenshteinCapped } from './levenshtein.js'
 
 /**
@@ -101,10 +102,34 @@ export class SearchCore {
     this.index = buildIndex()
     this.maxResults = options.maxResults ?? 20
     this.typoTolerance = options.typoTolerance ?? 2
+
+    // Defer choseong-variant expansion to a microtask so the constructor
+    // returns immediately. By the time the user fires their first query,
+    // expansion has typically already completed; the inline guard in
+    // `query` covers the rare case where a choseong query arrives first.
+    //
+    // 초성 변형 확장을 microtask로 지연 — 생성자는 즉시 반환. 사용자가 첫
+    // 쿼리를 날릴 시점에는 확장이 보통 이미 완료. 초성 쿼리가 먼저 도착하는
+    // 드문 경우는 `query` 내 inline 가드로 처리.
+    if (!this.index.choseongExpanded) {
+      queueMicrotask(() => expandChoseongVariants(this.index))
+    }
   }
 
   query(input: string): SearchResult[] {
     if (!input) return []
+
+    // Choseong queries (containing compat jamo like `ㅅ`, `ㄱ`) need the
+    // expanded variant index. If the deferred microtask hasn't fired yet,
+    // complete the work synchronously here. ASCII / Hangul-syllable queries
+    // hit the original index directly and skip this entirely.
+    //
+    // 초성 쿼리(`ㅅ`, `ㄱ` 같은 호환 자모 포함)는 확장된 변형 인덱스가 필요.
+    // deferred microtask가 아직 fire 안 됐으면 여기서 동기로 마무리.
+    // ASCII / 한글 음절 쿼리는 원본 인덱스를 직접 사용하며 이 경로 건너뜀.
+    if (!this.index.choseongExpanded && containsCompatJamo(input)) {
+      expandChoseongVariants(this.index)
+    }
 
     const query = input.toLowerCase()
     const queryByteLength = this.encoder.encode(query).length
