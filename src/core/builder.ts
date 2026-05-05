@@ -1,4 +1,5 @@
-import { emojis as RAW_EMOJIS, groups, keywords, postings } from './data.generated.js'
+import { decodeFrontCoded, decodePostings } from './data-codec.js'
+import { emojis as RAW_EMOJIS, groups, keywordsFC, postingsDV } from './data.generated.js'
 import { generateVariants } from './hangul.js'
 
 export interface EmojiEntry {
@@ -57,6 +58,8 @@ export function buildIndex(): SearchIndex {
     group: groups[groupId],
   }))
 
+  const keywords = decodeFrontCoded(keywordsFC)
+  const postings = decodePostings(postingsDV, keywords.length)
   const exactLookup = new Map<string, number>()
 
   for (let i = 0; i < keywords.length; i++) {

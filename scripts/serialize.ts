@@ -1,3 +1,4 @@
+import { encodeFrontCoded, encodePostings } from './data-codec.ts'
 import type { EmojiTable } from './build-emoji-table.ts'
 import type { InvertedIndex } from './build-inverted-index.ts'
 
@@ -6,9 +7,28 @@ import type { InvertedIndex } from './build-inverted-index.ts'
  * embedded as a single `JSON.parse(...)` call on a string literal — V8
  * parses this notably faster than the equivalent object/array literal.
  *
+ * Two compaction techniques shrink the wire payload:
+ *
+ * - **Front-coded keywords** (`keywordsFC`) — sorted strings stored as
+ *   `[sharedPrefixLen, suffix]` tuples, exploiting heavy prefix overlap
+ *   in a sorted dictionary.
+ * - **Delta + varint postings** (`postingsDV`) — sorted ID lists stored
+ *   as base64-packed LEB128 varints over consecutive deltas.
+ *
+ * See `src/core/data-codec.ts` for the matching decoders.
+ *
  * 빌드된 인덱스를 TypeScript 모듈로 직렬화. 런타임 payload는 문자열 리터럴
  * 위에 `JSON.parse(...)` 한 번 호출로 임베드 — V8이 동등한 object/array
  * 리터럴보다 눈에 띄게 빠르게 파싱.
+ *
+ * 두 가지 컴팩션 기법으로 wire payload 절감:
+ *
+ * - **Front-coded keywords** (`keywordsFC`) — 정렬된 문자열을
+ *   `[공유prefix길이, 나머지]` 튜플로 저장. 정렬된 사전의 prefix 중복을 활용.
+ * - **Delta + varint postings** (`postingsDV`) — 정렬된 ID 리스트를 연속
+ *   차이값에 대한 base64-packed LEB128 varint로 저장.
+ *
+ * 짝이 되는 디코더는 `src/core/data-codec.ts` 참조.
  *
  * @see https://v8.dev/blog/cost-of-javascript-2019
  */
@@ -16,8 +36,8 @@ export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): st
   const payload = JSON.stringify({
     groups: table.groups,
     emojis: table.emojis,
-    keywords: index.keywords,
-    postings: index.postings,
+    keywordsFC: encodeFrontCoded(index.keywords),
+    postingsDV: encodePostings(index.postings),
   })
   const escaped = payload.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 
@@ -27,15 +47,15 @@ export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): st
 interface RawData {
   groups: string[];
   emojis: Array<[emoji: string, name: string, groupId: number]>;
-  keywords: string[];
-  postings: number[][];
+  keywordsFC: Array<[sharedPrefixLen: number, suffix: string]>;
+  postingsDV: string;
 }
 
 const RAW = JSON.parse('${escaped}') as RawData;
 
 export const groups = RAW.groups;
 export const emojis = RAW.emojis;
-export const keywords = RAW.keywords;
-export const postings = RAW.postings;
+export const keywordsFC = RAW.keywordsFC;
+export const postingsDV = RAW.postingsDV;
 `
 }
