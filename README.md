@@ -8,9 +8,9 @@ Fuzzy emoji search engine with Levenshtein matching and Korean choseong (초성)
 
 - **Fuzzy matching** — `aple`, `appel`, `appl` 모두 🍎로 매칭 (Levenshtein 거리 ≤ 2)
 - **Korean choseong** — `사과`, `사ㄱ`, `ㅅㄱ` 모두 🍎로 매칭. 점진적 입력에 대응
-- **Pre-built index** — ~2K emojis · ~11K keywords가 번들에 임베드. cold start ~3ms
+- **Pre-built index** — ~2K emojis · ~9K keywords가 번들에 임베드 (한국어 초성 변형 ~2K개는 런타임에 확장). cold start ~3ms
 - **Personalization** — recency + frequency 기반 자동 boost
-- **Tiny** — ~100KB gzipped (코드 + 인덱스 데이터)
+- **Tiny** — ~85KB gzipped (코드 + 인덱스 데이터)
 - **Pure TypeScript** — native 의존성 없음, 브라우저 호환
 
 ## Install
@@ -85,7 +85,7 @@ interface SearchResult {
 
 ## Korean Choseong
 
-한국어 음절은 초성(첫 자음)으로 분해 가능합니다. 사용자가 단축 입력으로 초성만 치는 경우가 흔하므로, 빌드 타임에 점진적 초성 변형을 모두 인덱스에 펼쳐 둡니다.
+한국어 음절은 초성(첫 자음)으로 분해 가능합니다. 사용자가 단축 입력으로 초성만 치는 경우가 흔하므로, 인스턴스 생성 직후 microtask에서 점진적 초성 변형을 모두 인덱스에 펼쳐 둡니다 (번들 사이즈 절감).
 
 | Input    | Matches | 설명                          |
 |----------|---------|-------------------------------|
@@ -95,7 +95,7 @@ interface SearchResult {
 | `ㄱㅇㅈ` | 🐶      | 강아지 → ㄱ + ㅇ + ㅈ         |
 | `ㅋㅍ`   | ☕      | 커피 → ㅋ + ㅍ                |
 
-런타임 비용은 ASCII 쿼리와 동일 — 변형은 모두 사전 계산되어 있습니다.
+런타임 비용은 ASCII 쿼리와 동일 — 변형 인덱스는 microtask에서 한 번 생성된 뒤 캐싱됩니다.
 
 ## Data Sources
 
