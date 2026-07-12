@@ -8,6 +8,7 @@ function makeInputs(partial: Partial<RawInputs>): RawInputs {
     emojilib: {},
     meta: {},
     koKeywords: {},
+    concepts: {},
     ...partial,
   }
 }
@@ -97,6 +98,45 @@ describe('buildInvertedIndex', () => {
     const index = buildInvertedIndex(inputs, table)
 
     expect(index.keywords).not.toContain('사과')
+  })
+
+  test('concept terms are inverted into keyword → emoji-ID postings', () => {
+    const inputs = makeInputs({
+      emojilib: { '🎉': [], '🥳': [] },
+      concepts: { celebration: ['🎉', '🥳'] },
+    })
+    const table = buildEmojiTable(inputs.emojilib, inputs.meta)
+    const index = buildInvertedIndex(inputs, table)
+
+    const idx = index.keywords.indexOf('celebration')
+    expect(idx).toBeGreaterThanOrEqual(0)
+    expect(index.postings[idx]).toEqual(
+      [table.emojiIdMap.get('🎉')!, table.emojiIdMap.get('🥳')!].sort((a, b) => a - b),
+    )
+  })
+
+  test('English concept terms are lowercased', () => {
+    const inputs = makeInputs({
+      emojilib: { '🎉': [] },
+      concepts: { Celebration: ['🎉'] },
+    })
+    const table = buildEmojiTable(inputs.emojilib, inputs.meta)
+    const index = buildInvertedIndex(inputs, table)
+
+    expect(index.keywords).toContain('celebration')
+    expect(index.keywords).not.toContain('Celebration')
+  })
+
+  test('concept emojis missing in emojilib are silently skipped', () => {
+    const inputs = makeInputs({
+      emojilib: { '🎉': [] }, // 🥳 absent → no ID
+      concepts: { celebration: ['🎉', '🥳'] },
+    })
+    const table = buildEmojiTable(inputs.emojilib, inputs.meta)
+    const index = buildInvertedIndex(inputs, table)
+
+    const idx = index.keywords.indexOf('celebration')
+    expect(index.postings[idx]).toEqual([table.emojiIdMap.get('🎉')!])
   })
 
   test('keywords array length equals postings array length', () => {
