@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import {
-  decodeFrontCoded,
-  decodePostings,
-} from '../src/core/data-codec.ts'
+import { decodeFrontCoded, decodePostings } from '../src/core/data-codec.ts'
 import type { EmojiTable } from './build-emoji-table.ts'
 import type { InvertedIndex } from './build-inverted-index.ts'
 import { serializeAsTsModule } from './serialize.ts'

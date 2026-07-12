@@ -96,3 +96,31 @@ runQualitySuite('Korean partial choseong', [
   { query: '커ㅍ', expected: '☕' },
   { query: '축ㄱ', expected: '⚽' },
 ])
+
+runQualitySuite('Concept (English)', [
+  { query: 'celebration', expected: '🎉' },
+  { query: 'sleepy', expected: '😴' },
+  { query: 'money', expected: '💰' },
+  { query: 'deadline', expected: '⏰' },
+  { query: 'workout', expected: '💪' },
+  { query: 'spooky', expected: '👻' },
+  { query: 'perfect', expected: '💯' },
+  { query: 'birthday', expected: '🎂' },
+  { query: 'goodnight', expected: '🌙' },
+  { query: 'luck', expected: '🍀' },
+])
+
+runQualitySuite('Concept (Korean)', [
+  { query: '축하', expected: '🎉' },
+  { query: '졸림', expected: '😴' },
+  { query: '돈', expected: '💰' },
+  { query: '마감', expected: '⏰' },
+  { query: '운동', expected: '💪' },
+  { query: '생일', expected: '🎂' },
+  { query: '행운', expected: '🍀' },
+])
+
+runQualitySuite('Concept (Korean choseong)', [
+  { query: 'ㅊㅎ', expected: '🎉' }, // 축하
+  { query: 'ㅅㅇ', expected: '🎂' }, // 생일
+])

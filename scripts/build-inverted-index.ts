@@ -14,6 +14,8 @@ export interface InvertedIndex {
  * - emoji name as a whole + each whitespace-split word (lowercased)
  * - Korean keywords (originals only — choseong variants are expanded at
  *   runtime via SearchCore to keep the bundled index lean)
+ * - concept terms (English + Korean), inverted from concept → emojis so an
+ *   abstract query like `"celebration"` / `"축하"` matches expressive emojis
  *
  * Keywords are sorted lexicographically and postings (emoji ID lists)
  * are sorted+deduped. Sorted keywords enable binary-search prefix scans
@@ -81,6 +83,28 @@ export function buildInvertedIndex(inputs: RawInputs, table: EmojiTable): Invert
     if (id === undefined) continue
 
     for (const kw of keywords) {
+      addKeyword(kw, id)
+    }
+  }
+
+  // Concept sources: first-party concept → emoji mappings, inverted here into
+  // keyword → ids. Concept terms (English and Korean) become ordinary keywords,
+  // so they flow through the same exact/prefix/fuzzy tiers — and Korean concept
+  // terms pick up choseong variants at runtime for free. Lowercased so English
+  // terms match the lowercased query (a no-op for Korean/emoji text).
+  //
+  // Concept 소스: 1차 concept → 이모지 매핑을 여기서 keyword → ids로 역변환.
+  // Concept 개념어(영어·한국어)는 일반 키워드가 되어 동일한 exact/prefix/fuzzy
+  // 티어를 그대로 통과 — 한국어 concept는 런타임 초성 변형까지 공짜로 획득.
+  // 소문자화된 쿼리와 맞추기 위해 lowercase(한국어/이모지 텍스트엔 no-op).
+  for (const [concept, emojis] of Object.entries(inputs.concepts)) {
+    const kw = concept.toLowerCase()
+
+    for (const emoji of emojis) {
+      const id = table.emojiIdMap.get(emoji)
+
+      if (id === undefined) continue
+
       addKeyword(kw, id)
     }
   }
