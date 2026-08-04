@@ -139,6 +139,26 @@ describe('buildInvertedIndex', () => {
     expect(index.postings[idx]).toEqual([table.emojiIdMap.get('🎉')!])
   })
 
+  test('concept map (conceptTerms/conceptPostings) carries only curated ids', () => {
+    const inputs = makeInputs({
+      // 🎂 shares the keyword "celebration" but is NOT a curated concept emoji.
+      emojilib: { '🎉': [], '🥳': [], '🎂': ['celebration'] },
+      concepts: { Celebration: ['🎉', '🥳'] },
+    })
+    const table = buildEmojiTable(inputs.emojilib, inputs.meta)
+    const index = buildInvertedIndex(inputs, table)
+
+    // Term is lowercased and sorted into conceptTerms, parallel to conceptPostings.
+    const ci = index.conceptTerms.indexOf('celebration')
+    expect(ci).toBeGreaterThanOrEqual(0)
+    expect(index.conceptTerms.length).toBe(index.conceptPostings.length)
+    // Only the curated 🎉🥳 — 🎂 (incidental keyword) must not appear.
+    expect(index.conceptPostings[ci]).toEqual(
+      [table.emojiIdMap.get('🎉')!, table.emojiIdMap.get('🥳')!].sort((a, b) => a - b),
+    )
+    expect(index.conceptPostings[ci]).not.toContain(table.emojiIdMap.get('🎂')!)
+  })
+
   test('keywords array length equals postings array length', () => {
     const inputs = makeInputs({
       emojilib: { '🍎': ['apple', 'red'], '🍌': ['banana', 'yellow'] },

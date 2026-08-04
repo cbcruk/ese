@@ -90,4 +90,27 @@ describe('SearchCore', () => {
     const results = core.query('red apple')
     expect(results[0].score).toBeGreaterThan(1.0)
   })
+
+  test('concept boost ranks a curated concept emoji first', () => {
+    // "celebration" is both a curated concept term (🎉🎊🥳) and an incidental
+    // emojilib keyword (🎂🎁 etc.). The concept boost must put a curated emoji
+    // at the very top, above the coincidental exact matches.
+    const core = new SearchCore()
+    const results = core.query('celebration')
+    expect(['🎉', '🎊', '🥳']).toContain(results[0].emoji)
+  })
+
+  test('concept boost pushes curated score above the name-boost ceiling (1.05)', () => {
+    const core = new SearchCore()
+    const top = core.query('celebration')[0]
+    expect(top.score).toBeGreaterThan(1.05)
+  })
+
+  test('concept boost applies only to the matched concept, not other exacts', () => {
+    // "apple" is not a concept term → no curated boost, so the top score stays
+    // within the ordinary exact + name-boost range.
+    const core = new SearchCore()
+    const top = core.query('apple').find((r) => r.emoji === '🍎')!
+    expect(top.score).toBeLessThanOrEqual(1.05)
+  })
 })

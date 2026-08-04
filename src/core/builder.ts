@@ -1,5 +1,12 @@
 import { decodeFrontCoded, decodePostings } from './data-codec.js'
-import { emojis as RAW_EMOJIS, groups, keywordsFC, postingsDV } from './data.generated.js'
+import {
+  conceptPostingsDV,
+  conceptTermsFC,
+  emojis as RAW_EMOJIS,
+  groups,
+  keywordsFC,
+  postingsDV,
+} from './data.generated.js'
 import { generateVariants } from './hangul.js'
 
 export interface EmojiEntry {
@@ -28,6 +35,17 @@ export interface SearchIndex {
    * Exact match를 위한 키워드 → postings 인덱스 직접 조회.
    */
   exactLookup: Map<string, number>
+  /**
+   * Concept term → curated emoji IDs. Consulted when a query exactly matches
+   * a concept term to give those curated emojis a ranking boost, so they lead
+   * a concept query rather than tying with emojis that merely share the
+   * keyword. See `data/concepts.json`.
+   *
+   * 개념어 → 큐레이션 이모지 ID. 쿼리가 개념어와 정확히 일치할 때 조회되어
+   * 해당 큐레이션 이모지에 랭킹 가산점을 부여 — 키워드만 공유하는 이모지와
+   * 동점이 되는 대신 개념 쿼리 상단을 차지하게 함. `data/concepts.json` 참고.
+   */
+  conceptLookup: Map<string, number[]>
   /**
    * `true` once {@link expandChoseongVariants} has merged Hangul choseong
    * variants into {@link keywords} / {@link postings} / {@link exactLookup}.
@@ -66,11 +84,20 @@ export function buildIndex(): SearchIndex {
     exactLookup.set(keywords[i], i)
   }
 
+  const conceptTerms = decodeFrontCoded(conceptTermsFC)
+  const conceptPostings = decodePostings(conceptPostingsDV, conceptTerms.length)
+  const conceptLookup = new Map<string, number[]>()
+
+  for (let i = 0; i < conceptTerms.length; i++) {
+    conceptLookup.set(conceptTerms[i], conceptPostings[i])
+  }
+
   cached = {
     emojis: emojiEntries,
     keywords,
     postings,
     exactLookup,
+    conceptLookup,
     choseongExpanded: false,
   }
 

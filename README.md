@@ -13,7 +13,7 @@ Fuzzy emoji search engine with Levenshtein matching and Korean choseong (초성)
 - **Concept search** — `축하`/`celebration` → 🎉, `졸림`/`sleepy` → 😴 처럼 감정·상황 개념어로 검색. 큐레이션된 매핑(한/영)이라 임베딩·네트워크 없이 오프라인 유지
 - **Pre-built index** — ~2K emojis · ~9K keywords가 번들에 임베드 (한국어 초성 변형 ~2K개는 런타임에 확장). cold start ~3ms
 - **Personalization** — recency + frequency 기반 자동 boost
-- **Tiny** — ~85KB gzipped (코드 + 인덱스 데이터)
+- **Tiny** — ~90KB gzipped (코드 + 인덱스 데이터)
 - **Pure TypeScript** — native 의존성 없음, 브라우저 호환
 
 ## Install
@@ -86,6 +86,7 @@ interface SearchResult {
 | 4    | Levenshtein dist 2 | 0.4   | 4 bytes (fallback) |
 
 - 이름 매치 tie-breaking boost: 정확 일치 시 `+0.05`, 부분 포함 시 `+0.02`
+- 개념 매치 boost: 쿼리가 개념어와 정확히 일치하면 해당 개념의 큐레이션 이모지에 `+0.10` (아래 [Concept Search](#concept-search) 참고)
 - 개인화 boost (recency + frequency): 최대 `+0.25`
 
 ## Korean Choseong
@@ -104,7 +105,7 @@ interface SearchResult {
 
 ## Concept Search
 
-표층(철자) 매칭만으로는 `축하`, `졸림`, `마감` 같은 **감정·상황 개념어**로 이모지를 찾기 어렵습니다. `data/concepts.json`은 개념어(한/영) → 이모지 매핑을 큐레이션해, 빌드 시 일반 키워드로 인덱스에 펼칩니다. 별도 런타임 로직 없이 기존 exact/prefix/fuzzy 티어를 그대로 통과하며, 한국어 개념어는 초성 확장(`축하` → `ㅊㅎ`)까지 자동으로 얻습니다.
+표층(철자) 매칭만으로는 `축하`, `졸림`, `마감` 같은 **감정·상황 개념어**로 이모지를 찾기 어렵습니다. `data/concepts.json`은 개념어(한/영) → 이모지 매핑을 큐레이션해, 빌드 시 일반 키워드로 인덱스에 펼칩니다. 기존 exact/prefix/fuzzy 티어를 그대로 통과하며, 한국어 개념어는 초성 확장(`축하` → `ㅊㅎ`)까지 자동으로 얻습니다.
 
 | Input          | Matches   | 설명                       |
 |----------------|-----------|----------------------------|
@@ -114,7 +115,7 @@ interface SearchResult {
 | `대박` / `lit`         | 🔥 💯 🤯 | 감탄                       |
 | `ㅊㅎ`                 | 🎉        | 개념어 초성 검색           |
 
-임베딩·벡터 DB·네트워크 없이 **큐레이션 데이터 ~0.5KB(gzip)** 만 더해 개념 검색을 제공합니다. 개념어가 `emojilib`에 이미 존재하는 영어 키워드(예: `celebration`)와 겹치면 동일한 exact 티어(1.0)로 병합되므로, 큐레이션한 이모지가 우연히 겹친 매치보다 반드시 상위에 오지는 않습니다. `emojilib`에 없는 개념어(대부분의 한국어 및 추상어)는 최상위로 노출됩니다.
+임베딩·벡터 DB·네트워크 없이 **큐레이션 데이터 ~2KB(gzip)** 만 더해 개념 검색을 제공합니다. 쿼리가 개념어와 정확히 일치하면 그 개념의 큐레이션 이모지에 `+0.10` 랭킹 가산점이 붙어, `emojilib`에 같은 키워드(예: `celebration`)를 우연히 가진 이모지(🎂🎁 등)보다 **확실히 상위**에 노출됩니다. 이 가산점은 정확한 개념어 매치에만 적용되며, 부수적으로 키워드를 공유하는 이모지에는 적용되지 않습니다.
 
 ## Data Sources
 

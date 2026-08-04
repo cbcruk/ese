@@ -38,6 +38,8 @@ export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): st
     emojis: table.emojis,
     keywordsFC: encodeFrontCoded(index.keywords),
     postingsDV: encodePostings(index.postings),
+    conceptTermsFC: encodeFrontCoded(index.conceptTerms),
+    conceptPostingsDV: encodePostings(index.conceptPostings),
   })
   const escaped = payload.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 
@@ -49,6 +51,8 @@ interface RawData {
   emojis: Array<[emoji: string, name: string, groupId: number]>;
   keywordsFC: Array<[sharedPrefixLen: number, suffix: string]>;
   postingsDV: string;
+  conceptTermsFC: Array<[sharedPrefixLen: number, suffix: string]>;
+  conceptPostingsDV: string;
 }
 
 const RAW = JSON.parse('${escaped}') as RawData;
@@ -57,5 +61,7 @@ export const groups = RAW.groups;
 export const emojis = RAW.emojis;
 export const keywordsFC = RAW.keywordsFC;
 export const postingsDV = RAW.postingsDV;
+export const conceptTermsFC = RAW.conceptTermsFC;
+export const conceptPostingsDV = RAW.conceptPostingsDV;
 `
 }
