@@ -4,6 +4,8 @@ Fuzzy emoji search engine with Levenshtein matching and Korean choseong (초성)
 
 오타 허용 (`aple` → 🍎) 및 한국어 초성 검색 (`ㅅㄱ` → 🍎)을 지원하는 이모지 검색 엔진.
 
+**[▶ Live demo](https://cbcruk.github.io/ese/)** — 브라우저에서 바로 검색해보기
+
 ## Features
 
 - **Fuzzy matching** — `aple`, `appel`, `appl` 모두 🍎로 매칭 (Levenshtein 거리 ≤ 2)
@@ -126,11 +128,23 @@ interface SearchResult {
 ```bash
 pnpm install
 pnpm build           # build:index → tsc
-pnpm test            # 149 tests
+pnpm build:site      # build → assemble _site/ (demo page + dist)
+pnpm test            # vitest
 pnpm bench           # vitest benchmarks
 pnpm lint            # oxlint
 pnpm format          # oxfmt
 ```
+
+The `demo/` page is a zero-build static playground — since the library is
+pure ESM with no runtime dependencies, it loads the compiled `dist/`
+directly as native browser modules. `pnpm build:site` stages it into
+`_site/`, which the `Deploy demo to GitHub Pages` workflow publishes to
+GitHub Pages on every push to `main`.
+
+`demo/` 페이지는 빌드가 필요 없는 정적 플레이그라운드 — 라이브러리가 런타임
+의존성 없는 순수 ESM이라 컴파일된 `dist/`를 브라우저 네이티브 모듈로 직접
+로드합니다. `pnpm build:site`가 `_site/`로 스테이징하고, `Deploy demo to
+GitHub Pages` 워크플로가 `main` 푸시마다 GitHub Pages에 배포합니다.
 
 ## License
 
