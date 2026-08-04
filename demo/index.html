@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ese — Emoji Search Engine</title>
+    <meta
+      name="description"
+      content="오타 허용 및 한국어 초성·개념 검색을 지원하는 이모지 검색 엔진 데모"
+    />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #6b7280;
+        --card: #f6f7f9;
+        --card-hover: #eceef1;
+        --border: #e5e7eb;
+        --accent: #3b82f6;
+        --accent-fg: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1115;
+          --fg: #e6e8eb;
+          --muted: #9aa1ab;
+          --card: #1a1d23;
+          --card-hover: #232730;
+          --border: #2a2e37;
+          --accent: #3b82f6;
+          --accent-fg: #ffffff;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Apple SD Gothic Neo",
+          "Noto Sans KR",
+          sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+      header h1 {
+        font-size: 2rem;
+        margin: 0 0 0.25rem;
+        letter-spacing: -0.02em;
+      }
+      header p {
+        margin: 0 0 1.75rem;
+        color: var(--muted);
+      }
+      header a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      header a:hover {
+        text-decoration: underline;
+      }
+      .search {
+        width: 100%;
+        font-size: 1.25rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        color: var(--fg);
+        outline: none;
+      }
+      .search:focus {
+        border-color: var(--accent);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1rem 0 0.25rem;
+      }
+      .chip {
+        font-size: 0.85rem;
+        padding: 0.3rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .chip:hover {
+        background: var(--card);
+        color: var(--fg);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.85rem;
+        min-height: 1.25rem;
+        margin: 1.25rem 0 0.5rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.6rem;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.9rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.12s ease;
+      }
+      .card:hover {
+        background: var(--card-hover);
+      }
+      .card .glyph {
+        font-size: 2.2rem;
+        line-height: 1;
+      }
+      .card .name {
+        font-size: 0.8rem;
+        color: var(--fg);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+      }
+      .card .score {
+        font-size: 0.7rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .empty {
+        color: var(--muted);
+        padding: 2rem 0;
+        text-align: center;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 1.5rem;
+        transform: translateX(-50%) translateY(1rem);
+        background: var(--fg);
+        color: var(--bg);
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      footer {
+        margin-top: 2.5rem;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>ese 🔎</h1>
+        <p>
+          오타 허용 · 한국어 초성 · 개념 검색을 지원하는 이모지 검색 엔진.
+          <a href="https://github.com/cbcruk/ese" target="_blank" rel="noopener"
+            >GitHub</a
+          >
+        </p>
+      </header>
+
+      <input
+        id="q"
+        class="search"
+        type="search"
+        placeholder="검색어 입력 — apple, aple, 사과, ㅅㄱ, 축하, sleepy …"
+        autocomplete="off"
+        autofocus
+      />
+
+      <div class="chips" id="chips"></div>
+      <div class="meta" id="meta"></div>
+      <div class="grid" id="results"></div>
+
+      <footer>
+        결과를 클릭하면 이모지가 복사되고 개인화(recency + frequency)에 반영됩니다 —
+        같은 검색을 다시 하면 자주 쓴 이모지가 위로 올라옵니다.
+      </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module">
+      import { EmojiSearch } from "./dist/index.js";
+
+      const search = new EmojiSearch({ maxResults: 40 });
+      const q = document.getElementById("q");
+      const results = document.getElementById("results");
+      const meta = document.getElementById("meta");
+      const toast = document.getElementById("toast");
+      const chipsEl = document.getElementById("chips");
+
+      const examples = ["apple", "aple", "사과", "ㅅㄱ", "축하", "sleepy", "마감", "🔥"];
+      for (const ex of examples) {
+        const b = document.createElement("button");
+        b.className = "chip";
+        b.textContent = ex;
+        b.addEventListener("click", () => {
+          q.value = ex;
+          run();
+          q.focus();
+        });
+        chipsEl.appendChild(b);
+      }
+
+      let toastTimer;
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 1400);
+      }
+
+      function pick(emoji) {
+        search.recordUsage(emoji);
+        navigator.clipboard?.writeText(emoji).catch(() => {});
+        showToast(`${emoji} 복사됨`);
+        run();
+      }
+
+      function run() {
+        const query = q.value.trim();
+        if (!query) {
+          results.innerHTML = "";
+          meta.textContent = "";
+          return;
+        }
+
+        const t0 = performance.now();
+        const list = search.query(query);
+        const ms = (performance.now() - t0).toFixed(2);
+
+        meta.textContent = `${list.length}개 결과 · ${ms}ms`;
+
+        if (list.length === 0) {
+          results.innerHTML = `<div class="empty">결과 없음</div>`;
+          return;
+        }
+
+        results.innerHTML = "";
+        for (const r of list) {
+          const card = document.createElement("button");
+          card.className = "card";
+          card.title = `${r.name} — ${r.group}`;
+          card.innerHTML = `
+            <span class="glyph">${r.emoji}</span>
+            <span class="name">${r.name}</span>
+            <span class="score">${r.score.toFixed(2)}</span>`;
+          card.addEventListener("click", () => pick(r.emoji));
+          results.appendChild(card);
+        }
+      }
+
+      q.addEventListener("input", run);
+    </script>
+  </body>
+</html>
