@@ -4,6 +4,27 @@ import type { RawInputs } from './load-inputs.ts'
 export interface InvertedIndex {
   keywords: string[]
   postings: number[][]
+  /**
+   * Concept terms (lowercased, sorted lexicographically) that back the
+   * concept-match ranking boost. Distinct from {@link keywords}: a concept
+   * term is only listed here when it comes from `concepts.json`, so the
+   * runtime can boost the *curated* emojis for a concept query without also
+   * boosting emojis that merely happen to share the keyword.
+   *
+   * 개념 매치 랭킹 가산점의 근거가 되는 concept 개념어(소문자, lexicographic
+   * 정렬). {@link keywords}와 별개 — `concepts.json`에서 온 개념어만 여기
+   * 실리므로, 런타임이 개념 쿼리에 대해 *큐레이션된* 이모지만 부스트하고
+   * 우연히 같은 키워드를 공유하는 이모지는 부스트하지 않을 수 있음.
+   */
+  conceptTerms: string[]
+  /**
+   * Parallel to {@link conceptTerms}: the curated emoji IDs each concept term
+   * maps to (sorted ascending).
+   *
+   * {@link conceptTerms}와 동일 인덱스로 매칭 — 각 개념어가 매핑하는 큐레이션
+   * 이모지 ID들(오름차순 정렬).
+   */
+  conceptPostings: number[][]
 }
 
 /**
@@ -20,6 +41,10 @@ export interface InvertedIndex {
  * Keywords are sorted lexicographically and postings (emoji ID lists)
  * are sorted+deduped. Sorted keywords enable binary-search prefix scans
  * at runtime.
+ *
+ * Also emits a separate concept map ({@link InvertedIndex.conceptTerms} /
+ * {@link InvertedIndex.conceptPostings}) that powers the concept-match
+ * ranking boost at runtime.
  *
  * 키워드 → 이모지 ID 역색인(inverted index)을 생성.
  *
@@ -93,10 +118,20 @@ export function buildInvertedIndex(inputs: RawInputs, table: EmojiTable): Invert
   // terms pick up choseong variants at runtime for free. Lowercased so English
   // terms match the lowercased query (a no-op for Korean/emoji text).
   //
+  // The same (term → curated ids) pairs are also collected into a separate
+  // concept map so the runtime can apply a ranking boost to the curated emojis
+  // for a concept query without boosting emojis that merely share the keyword.
+  //
   // Concept 소스: 1차 concept → 이모지 매핑을 여기서 keyword → ids로 역변환.
   // Concept 개념어(영어·한국어)는 일반 키워드가 되어 동일한 exact/prefix/fuzzy
   // 티어를 그대로 통과 — 한국어 concept는 런타임 초성 변형까지 공짜로 획득.
   // 소문자화된 쿼리와 맞추기 위해 lowercase(한국어/이모지 텍스트엔 no-op).
+  //
+  // 동일한 (개념어 → 큐레이션 ids) 쌍을 별도 concept 맵에도 수집 — 런타임이
+  // 개념 쿼리에 대해 키워드만 공유하는 이모지는 제외하고 큐레이션된 이모지에만
+  // 랭킹 가산점을 적용할 수 있게 함.
+  const conceptToIds = new Map<string, Set<number>>()
+
   for (const [concept, emojis] of Object.entries(inputs.concepts)) {
     const kw = concept.toLowerCase()
 
@@ -106,16 +141,28 @@ export function buildInvertedIndex(inputs: RawInputs, table: EmojiTable): Invert
       if (id === undefined) continue
 
       addKeyword(kw, id)
+
+      let set = conceptToIds.get(kw)
+      if (!set) {
+        set = new Set()
+        conceptToIds.set(kw, set)
+      }
+      set.add(id)
     }
   }
 
   // Finalize: sort keywords lexicographically (for binary-search prefix
-  // scans at runtime), sort+dedupe each posting list.
+  // scans at runtime), sort+dedupe each posting list. The concept map is
+  // finalized the same way — sorted terms, sorted id lists.
   //
   // 마무리: 키워드를 lexicographic 정렬(런타임에서 binary-search prefix
-  // 스캔용), 각 posting list도 정렬 + dedup.
+  // 스캔용), 각 posting list도 정렬 + dedup. concept 맵도 동일하게 마무리 —
+  // 개념어 정렬, id 리스트 정렬.
   const keywords = [...keywordToIds.keys()].sort()
   const postings = keywords.map((kw) => [...keywordToIds.get(kw)!].sort((a, b) => a - b))
 
-  return { keywords, postings }
+  const conceptTerms = [...conceptToIds.keys()].sort()
+  const conceptPostings = conceptTerms.map((t) => [...conceptToIds.get(t)!].sort((a, b) => a - b))
+
+  return { keywords, postings, conceptTerms, conceptPostings }
 }

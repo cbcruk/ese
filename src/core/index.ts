@@ -26,13 +26,15 @@ export interface SearchResult {
    */
   group: string
   /**
-   * Relevance score in `[0.0, 1.05]`. Exact match = 1.0, prefix = 0.8,
+   * Relevance score in `[0.0, 1.15]`. Exact match = 1.0, prefix = 0.8,
    * fuzzy distance 1 = 0.6, distance 2 = 0.4. Plus up to 0.05 from
-   * name-match tie-breaking.
+   * name-match tie-breaking, and +0.10 when the query exactly matches a
+   * concept term and this emoji is one of that concept's curated emojis.
    *
-   * `[0.0, 1.05]` 범위의 관련도 점수. Exact = 1.0, prefix = 0.8,
+   * `[0.0, 1.15]` 범위의 관련도 점수. Exact = 1.0, prefix = 0.8,
    * fuzzy dist 1 = 0.6, dist 2 = 0.4. 추가로 이름 매치 tie-breaking으로
-   * 최대 +0.05.
+   * 최대 +0.05, 그리고 쿼리가 개념어와 정확히 일치하고 이 이모지가 해당
+   * 개념의 큐레이션 이모지일 때 +0.10.
    */
   score: number
 }
@@ -68,7 +70,10 @@ export interface SearchCoreOptions {
  *
  * Each tier writes into a shared score map using "first wins" semantics,
  * so an emoji matched by a higher tier keeps its better score. Names
- * matching the query receive a small boost for tie-breaking.
+ * matching the query receive a small boost for tie-breaking. When the query
+ * exactly matches a concept term (e.g. `celebration`, `축하`), that concept's
+ * curated emojis receive a larger {@link CONCEPT_BOOST} so they lead the
+ * results instead of tying with emojis that merely share the keyword.
  *
  * Levenshtein distance is measured in UTF-16 code units (equivalent to
  * Unicode characters for all BMP code points, which covers all emoji
@@ -92,6 +97,20 @@ export interface SearchCoreOptions {
  * Levenshtein 거리는 UTF-16 code unit 단위 (BMP 영역 코드포인트는 Unicode
  * 문자 단위와 동일 — 한글 음절을 포함한 모든 이모지 키워드가 BMP에 속함).
  */
+/**
+ * Ranking boost added to a concept's curated emojis when the query exactly
+ * matches that concept term. Larger than the name-match tie-breaker (max
+ * +0.05) so a curated concept emoji reliably outranks an emoji that merely
+ * shares the keyword — e.g. `celebration` puts 🎉🎊🥳 above 🎂🎁, which
+ * carry `celebration` only as an incidental keyword.
+ *
+ * 쿼리가 개념어와 정확히 일치할 때 해당 개념의 큐레이션 이모지에 더하는 랭킹
+ * 가산점. 이름 매치 tie-breaker(최대 +0.05)보다 커서, 큐레이션된 개념 이모지가
+ * 키워드만 우연히 공유하는 이모지보다 확실히 상위에 옴 — 예: `celebration`은
+ * 🎉🎊🥳를, `celebration`을 부수적 키워드로만 가진 🎂🎁 위에 올림.
+ */
+const CONCEPT_BOOST = 0.1
+
 export class SearchCore {
   private index: SearchIndex
   private maxResults: number
@@ -147,10 +166,19 @@ export class SearchCore {
       this.fuzzyMatch(query, 2, 0.4, scores)
     }
 
+    // Curated emojis for the concept term the query exactly matches (if any),
+    // used to lift them above emojis that merely share the keyword.
+    //
+    // 쿼리가 정확히 일치하는 개념어의 큐레이션 이모지(있으면) — 키워드만
+    // 공유하는 이모지 위로 올리는 데 사용.
+    const conceptIds = this.index.conceptLookup.get(query)
+    const conceptSet = conceptIds ? new Set(conceptIds) : null
+
     const ranked: Array<[number, number]> = []
     for (const [id, score] of scores) {
       const name = this.index.emojis[id].name.toLowerCase()
-      const boost = name === query ? 0.05 : name.includes(query) ? 0.02 : 0
+      let boost = name === query ? 0.05 : name.includes(query) ? 0.02 : 0
+      if (conceptSet?.has(id)) boost += CONCEPT_BOOST
       ranked.push([id, score + boost])
     }
     ranked.sort((a, b) => b[1] - a[1])
