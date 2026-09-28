@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { containsCompatJamo, generateVariants } from './hangul.ts'
+import { containsCompatJamo, generateVariants, matchesHangulWord } from './hangul.ts'
 
 describe('generateVariants', () => {
   test('empty string returns empty array', () => {
@@ -73,5 +73,19 @@ describe('containsCompatJamo', () => {
 
   test('single jamo returns true', () => {
     expect(containsCompatJamo('ㅅ')).toBe(true)
+  })
+})
+
+describe('matchesHangulWord', () => {
+  test('matches the word itself and its choseong forms', () => {
+    expect(matchesHangulWord('사과', '사과')).toBe(true)
+    expect(matchesHangulWord('사ㄱ', '사과')).toBe(true)
+    expect(matchesHangulWord('ㅅㄱ', '사과')).toBe(true)
+  })
+
+  test('rejects other words, prefixes and empty names', () => {
+    expect(matchesHangulWord('ㅅㅈ', '사과')).toBe(false)
+    expect(matchesHangulWord('사', '사과')).toBe(false)
+    expect(matchesHangulWord('', '')).toBe(false)
   })
 })

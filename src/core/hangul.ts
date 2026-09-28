@@ -132,3 +132,23 @@ export function generateVariants(word: string): string[] {
 
   return variants
 }
+
+/**
+ * Returns `true` if `query` is `word` itself or `word` typed with some
+ * syllables reduced to their choseong (e.g. `"사과"`, `"사ㄱ"`, `"ㅅㄱ"` for
+ * `"사과"`).
+ *
+ * `query`가 `word` 자체이거나, `word`의 일부 음절을 초성으로 입력한 형태이면
+ * `true` (예: `"사과"`에 대해 `"사과"`, `"사ㄱ"`, `"ㅅㄱ"`).
+ */
+export function matchesHangulWord(query: string, word: string): boolean {
+  if (query.length !== word.length || word.length === 0) return false
+
+  for (let i = 0; i < word.length; i++) {
+    const q = query[i]
+    const w = word[i]
+    if (q !== w && q !== getChoseong(w)) return false
+  }
+
+  return true
+}

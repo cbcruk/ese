@@ -13,6 +13,13 @@ export interface EmojiEntry {
   emoji: string
   name: string
   group: string
+  /**
+   * Korean display name (the emoji's first Korean keyword), or `''` when the
+   * emoji has no Korean keywords.
+   *
+   * 한국어 대표명(이모지의 첫 번째 한국어 키워드). 한국어 키워드가 없으면 `''`.
+   */
+  koName: string
 }
 
 export interface SearchIndex {
@@ -70,13 +77,14 @@ let cached: SearchIndex | null = null
 export function buildIndex(): SearchIndex {
   if (cached) return cached
 
-  const emojiEntries: EmojiEntry[] = RAW_EMOJIS.map(([emoji, name, groupId]) => ({
+  const keywords = decodeFrontCoded(keywordsFC)
+  const emojiEntries: EmojiEntry[] = RAW_EMOJIS.map(([emoji, name, groupId, koNameId]) => ({
     emoji,
     name,
     group: groups[groupId],
+    koName: keywords[koNameId] ?? '',
   }))
 
-  const keywords = decodeFrontCoded(keywordsFC)
   const postings = decodePostings(postingsDV, keywords.length)
   const exactLookup = new Map<string, number>()
 

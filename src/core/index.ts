@@ -1,5 +1,5 @@
 import { buildIndex, expandChoseongVariants, type SearchIndex } from './builder.js'
-import { containsCompatJamo } from './hangul.js'
+import { containsCompatJamo, matchesHangulWord } from './hangul.js'
 import { levenshteinCapped } from './levenshtein.js'
 
 /**
@@ -70,7 +70,9 @@ export interface SearchCoreOptions {
  *
  * Each tier writes into a shared score map using "first wins" semantics,
  * so an emoji matched by a higher tier keeps its better score. Names
- * matching the query receive a small boost for tie-breaking. When the query
+ * matching the query receive a small boost for tie-breaking, as do Korean
+ * display names matched in full or by choseong (see
+ * {@link KO_NAME_BOOST}). When the query
  * exactly matches a concept term (e.g. `celebration`, `축하`), that concept's
  * curated emojis receive a larger {@link CONCEPT_BOOST} so they lead the
  * results instead of tying with emojis that merely share the keyword.
@@ -92,7 +94,8 @@ export interface SearchCoreOptions {
  *
  * 각 티어는 "first wins" 방식으로 공유 score 맵에 기록 — 상위 티어가 매치한
  * 이모지는 더 좋은 점수를 유지. 이름이 쿼리와 매치되는 경우 tie-breaking용
- * 작은 boost 추가.
+ * 작은 boost 추가 — 한국어 대표명이 그대로 또는 초성으로 매치되는 경우도
+ * 동일({@link KO_NAME_BOOST} 참고).
  *
  * Levenshtein 거리는 UTF-16 code unit 단위 (BMP 영역 코드포인트는 Unicode
  * 문자 단위와 동일 — 한글 음절을 포함한 모든 이모지 키워드가 BMP에 속함).
@@ -110,6 +113,19 @@ export interface SearchCoreOptions {
  * 🎉🎊🥳를, `celebration`을 부수적 키워드로만 가진 🎂🎁 위에 올림.
  */
 const CONCEPT_BOOST = 0.1
+
+/**
+ * Tie-breaking boost for an emoji whose Korean display name matches the query
+ * in full or by choseong (`강아지`, `강ㅇㅈ`, `ㄱㅇㅈ` → 🐶). Mirrors the
+ * English exact-name boost: many emojis share a Korean keyword (🐶🐕🐩 all
+ * carry `강아지`), and this keeps the emoji the word primarily names on top.
+ *
+ * 한국어 대표명이 쿼리와 그대로 또는 초성으로 매치되는 이모지의 tie-breaking
+ * 가산점(`강아지`, `강ㅇㅈ`, `ㄱㅇㅈ` → 🐶). 영어 이름 정확 일치 boost와 대응 —
+ * 여러 이모지가 같은 한국어 키워드를 공유(🐶🐕🐩 모두 `강아지`)하므로, 그
+ * 단어가 주로 가리키는 이모지를 맨 위에 유지.
+ */
+const KO_NAME_BOOST = 0.05
 
 export class SearchCore {
   private index: SearchIndex
@@ -176,8 +192,10 @@ export class SearchCore {
 
     const ranked: Array<[number, number]> = []
     for (const [id, score] of scores) {
-      const name = this.index.emojis[id].name.toLowerCase()
+      const entry = this.index.emojis[id]
+      const name = entry.name.toLowerCase()
       let boost = name === query ? 0.05 : name.includes(query) ? 0.02 : 0
+      if (matchesHangulWord(query, entry.koName)) boost += KO_NAME_BOOST
       if (conceptSet?.has(id)) boost += CONCEPT_BOOST
       ranked.push([id, score + boost])
     }

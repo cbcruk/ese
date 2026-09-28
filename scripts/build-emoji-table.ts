@@ -1,6 +1,6 @@
 import type { RawInputs } from './load-inputs.ts'
 
-export type EmojiTuple = [emoji: string, name: string, groupId: number]
+export type EmojiTuple = [emoji: string, name: string, groupId: number, koName: string]
 
 export interface EmojiTable {
   emojis: EmojiTuple[]
@@ -22,10 +22,17 @@ export interface EmojiTable {
  *
  * ID 할당 전 이모지 키를 lexicographic 정렬하므로, 입력 순서에 무관하게
  * 결정적(deterministic) 출력 보장.
+ *
+ * The first Korean keyword of each emoji is kept as its Korean display name
+ * (`koName`, `''` when absent), which the runtime uses as a tie-breaker.
+ *
+ * 각 이모지의 첫 번째 한국어 키워드를 한국어 대표명(`koName`, 없으면 `''`)으로
+ * 보관 — 런타임에서 동점 처리 기준으로 사용.
  */
 export function buildEmojiTable(
   emojilib: RawInputs['emojilib'],
   meta: RawInputs['meta'],
+  koKeywords: RawInputs['koKeywords'] = {},
 ): EmojiTable {
   const sortedKeys = Object.keys(emojilib).sort()
   const emojis: EmojiTuple[] = []
@@ -46,7 +53,7 @@ export function buildEmojiTable(
     }
 
     emojiIdMap.set(emoji, emojis.length)
-    emojis.push([emoji, m?.name ?? '', groupId])
+    emojis.push([emoji, m?.name ?? '', groupId, koKeywords[emoji]?.[0] ?? ''])
   }
 
   return {

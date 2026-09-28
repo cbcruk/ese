@@ -11,9 +11,9 @@ Fuzzy emoji search engine with Levenshtein matching and Korean choseong (초성)
 - **Fuzzy matching** — `aple`, `appel`, `appl` 모두 🍎로 매칭 (Levenshtein 거리 ≤ 2)
 - **Korean choseong** — `사과`, `사ㄱ`, `ㅅㄱ` 모두 🍎로 매칭. 점진적 입력에 대응
 - **Concept search** — `축하`/`celebration` → 🎉, `졸림`/`sleepy` → 😴 처럼 감정·상황 개념어로 검색. 큐레이션된 매핑(한/영)이라 임베딩·네트워크 없이 오프라인 유지
-- **Pre-built index** — ~2K emojis · ~9K keywords가 번들에 임베드 (한국어 초성 변형 ~2K개는 런타임에 확장). cold start ~3ms
+- **Pre-built index** — ~2K emojis · ~11K keywords가 번들에 임베드 (한국어 초성 변형 ~7K개는 런타임에 확장). cold start ~3ms
 - **Personalization** — recency + frequency 기반 자동 boost
-- **Tiny** — ~90KB gzipped (코드 + 인덱스 데이터)
+- **Tiny** — ~120KB gzipped (코드 + 인덱스 데이터)
 - **Pure TypeScript** — native 의존성 없음, 브라우저 호환
 
 ## Install
@@ -62,7 +62,7 @@ interface SearchResult {
   emoji: string   // "🍎"
   name: string    // "red apple"
   group: string   // "Food & Drink"
-  score: number   // [0.0, 1.05] — exact 1.0, prefix 0.8, fuzzy 0.4–0.6
+  score: number   // [0.0, 1.15] — exact 1.0, prefix 0.8, fuzzy 0.4–0.6
 }
 ```
 
@@ -86,6 +86,7 @@ interface SearchResult {
 | 4    | Levenshtein dist 2 | 0.4   | 4 bytes (fallback) |
 
 - 이름 매치 tie-breaking boost: 정확 일치 시 `+0.05`, 부분 포함 시 `+0.02`
+- 한국어 대표명(첫 번째 한국어 키워드) 매치 boost: 그대로 또는 초성으로 일치 시 `+0.05` (`강아지`/`ㄱㅇㅈ` → 🐶가 🐕🐩보다 상위)
 - 개념 매치 boost: 쿼리가 개념어와 정확히 일치하면 해당 개념의 큐레이션 이모지에 `+0.10` (아래 [Concept Search](#concept-search) 참고)
 - 개인화 boost (recency + frequency): 최대 `+0.25`
 
@@ -115,14 +116,14 @@ interface SearchResult {
 | `대박` / `lit`         | 🔥 💯 🤯 | 감탄                       |
 | `ㅊㅎ`                 | 🎉        | 개념어 초성 검색           |
 
-임베딩·벡터 DB·네트워크 없이 **큐레이션 데이터 ~2KB(gzip)** 만 더해 개념 검색을 제공합니다. 쿼리가 개념어와 정확히 일치하면 그 개념의 큐레이션 이모지에 `+0.10` 랭킹 가산점이 붙어, `emojilib`에 같은 키워드(예: `celebration`)를 우연히 가진 이모지(🎂🎁 등)보다 **확실히 상위**에 노출됩니다. 이 가산점은 정확한 개념어 매치에만 적용되며, 부수적으로 키워드를 공유하는 이모지에는 적용되지 않습니다.
+임베딩·벡터 DB·네트워크 없이 **큐레이션 데이터 ~6KB(gzip)** 만 더해 개념 검색을 제공합니다. 쿼리가 개념어와 정확히 일치하면 그 개념의 큐레이션 이모지에 `+0.10` 랭킹 가산점이 붙어, `emojilib`에 같은 키워드(예: `celebration`)를 우연히 가진 이모지(🎂🎁 등)보다 **확실히 상위**에 노출됩니다. 이 가산점은 정확한 개념어 매치에만 적용되며, 부수적으로 키워드를 공유하는 이모지에는 적용되지 않습니다.
 
 ## Data Sources
 
 - [`emojilib`](https://github.com/muan/emojilib) — 영어 키워드
 - [`unicode-emoji-json`](https://github.com/muan/unicode-emoji-json) — 이모지 메타데이터 (이름, 그룹)
-- `data/ko-keywords.json` — 1차 작성된 한국어 키워드 매핑 (~700개 이모지)
-- `data/concepts.json` — 1차 작성된 개념어(한/영) → 이모지 매핑 (~127개 개념)
+- `data/ko-keywords.json` — 한국어 키워드 매핑 (~1,900개 이모지, LLM 생성 초안)
+- `data/concepts.json` — 개념어(한/영) → 이모지 매핑 (~590개 개념, LLM 생성 초안)
 
 ## Development
 

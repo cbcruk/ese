@@ -51,7 +51,7 @@ describe('buildEmojiTable', () => {
     const meta = {}
     const table = buildEmojiTable(emojilib, meta)
 
-    expect(table.emojis[0]).toEqual(['🍎', '', 0])
+    expect(table.emojis[0]).toEqual(['🍎', '', 0, ''])
     expect(table.groups).toEqual([''])
   })
 
@@ -66,5 +66,13 @@ describe('buildEmojiTable', () => {
     const table = buildEmojiTable(emojilib, meta)
     expect(table.groups[0]).toBe('Food')
     expect(table.groups[1]).toBe('Animals')
+  })
+
+  test('keeps the first Korean keyword as koName', () => {
+    const emojilib = { '🍎': [], '🍏': [] }
+    const koKeywords = { '🍎': ['사과', '빨간사과'] }
+    const table = buildEmojiTable(emojilib, {}, koKeywords)
+
+    expect(table.emojis.map(([, , , koName]) => koName)).toEqual(['사과', ''])
   })
 })
