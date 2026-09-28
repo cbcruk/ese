@@ -1,0 +1,68 @@
+{
+  "Exact English": {
+    "hitAt1": 0.6667,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.7633
+  },
+  "Typo (distance 1)": {
+    "hitAt1": 0.2,
+    "hitAt5": 0.6,
+    "recall": 1,
+    "mrr": 0.3766
+  },
+  "Typo (distance 2)": {
+    "hitAt1": 0.4,
+    "hitAt5": 0.8,
+    "recall": 1,
+    "mrr": 0.55
+  },
+  "Korean exact": {
+    "hitAt1": 0.8667,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.9333
+  },
+  "Korean choseong": {
+    "hitAt1": 0.5,
+    "hitAt5": 0.9,
+    "recall": 1,
+    "mrr": 0.7167
+  },
+  "Korean partial choseong": {
+    "hitAt1": 0.8,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.9
+  },
+  "Concept (English)": {
+    "hitAt1": 0.6,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.7667
+  },
+  "Concept (Korean)": {
+    "hitAt1": 0.5714,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.7619
+  },
+  "Concept (Korean choseong)": {
+    "hitAt1": 0.5,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.75
+  },
+  "Intent (English)": {
+    "hitAt1": 0.36,
+    "hitAt5": 0.52,
+    "recall": 0.52,
+    "mrr": 0.4113
+  },
+  "Intent (Korean)": {
+    "hitAt1": 0.2,
+    "hitAt5": 0.32,
+    "recall": 0.32,
+    "mrr": 0.26
+  }
+}

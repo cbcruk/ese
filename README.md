@@ -132,6 +132,8 @@ pnpm build           # build:index → tsc
 pnpm build:site      # build → assemble _site/ (demo page + dist)
 pnpm test            # vitest
 pnpm bench           # vitest benchmarks
+pnpm quality         # ranking metrics (hit@1, hit@5, recall, MRR) vs baseline
+pnpm quality:update  # re-record tests/quality/quality.baseline.json
 pnpm lint            # oxlint
 pnpm format          # oxfmt
 ```

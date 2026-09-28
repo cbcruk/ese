@@ -32,6 +32,8 @@
     "build:site": "pnpm build && node scripts/build-site.ts",
     "prepublishOnly": "pnpm build",
     "test": "pnpm build:index && vitest run",
+    "quality": "pnpm build:index && vitest run tests/quality.test.ts",
+    "quality:update": "pnpm build:index && UPDATE_QUALITY_BASELINE=1 vitest run tests/quality.test.ts",
     "bench": "pnpm build:index && vitest bench --run",
     "lint": "oxlint src scripts tests",
     "lint:fix": "oxlint src scripts tests --fix",
