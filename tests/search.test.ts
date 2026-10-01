@@ -179,3 +179,25 @@ describe('typoTolerance option', () => {
     expect(results.some((r) => r.emoji === '🍎')).toBe(true)
   })
 })
+
+describe('multi-word queries', () => {
+  const search = new EmojiSearch()
+  const top = (q: string): string[] => search.query(q).map((r) => r.emoji)
+
+  test('matches each word when the phrase is not a keyword', () => {
+    expect(top('치킨 땡긴다')[0]).toBe('🍗')
+  })
+
+  test('ignores stopwords', () => {
+    expect(top('so hot')).toEqual(top('hot'))
+  })
+
+  test('matches the phrase with spaces removed', () => {
+    expect(top('커피 수혈')[0]).toBe('☕')
+  })
+
+  test('ranks emojis matching more words higher', () => {
+    const results = search.query('red apple')
+    expect(results[0].emoji).toBe('🍎')
+  })
+})

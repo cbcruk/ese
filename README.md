@@ -11,6 +11,7 @@ Fuzzy emoji search engine with Levenshtein matching and Korean choseong (초성)
 - **Fuzzy matching** — `aple`, `appel`, `appl` 모두 🍎로 매칭 (Levenshtein 거리 ≤ 2)
 - **Korean choseong** — `사과`, `사ㄱ`, `ㅅㄱ` 모두 🍎로 매칭. 점진적 입력에 대응
 - **Concept search** — `축하`/`celebration` → 🎉, `졸림`/`sleepy` → 😴 처럼 감정·상황 개념어로 검색. 큐레이션된 매핑(한/영)이라 임베딩·네트워크 없이 오프라인 유지
+- **Multi-word queries** — `치킨 땡긴다` → 🍗, `so hot` → 🥵 처럼 구절은 단어별로 매칭해 평균 점수로 순위를 매기고, 불용어(`so`, `너무` 등)는 무시. `커피 수혈`처럼 띄어쓰기가 다른 표현도 공백을 없앤 형태로 매칭
 - **Pre-built index** — ~2K emojis · ~11K keywords가 번들에 임베드 (한국어 초성 변형 ~7K개는 런타임에 확장). cold start ~3ms
 - **Personalization** — recency + frequency 기반 자동 boost
 - **Tiny** — ~125KB gzipped (코드 + 인덱스 데이터)
@@ -90,6 +91,14 @@ interface SearchResult {
 - 동점 처리: 개념어 쿼리는 큐레이션 순서(`hello` → 👋 먼저), 그 외에는 [Unicode 이모지 사용 빈도](https://home.unicode.org/emoji/emoji-frequency/) 순위가 높은 이모지가 먼저 (`ㅍㅈ` → 🍕가 ✉️🇫🇯보다 상위)
 - 개념 매치 boost: 쿼리가 개념어와 정확히 일치하면 해당 개념의 큐레이션 이모지에 `+0.10` (아래 [Concept Search](#concept-search) 참고)
 - 개인화 boost (recency + frequency): 최대 `+0.25`
+
+### Multi-word queries
+
+여러 단어로 된 쿼리는 키워드와 통째로 일치하는 경우가 드물어, 다음 셋 중 이모지별로 가장 높은 점수를 사용합니다.
+
+1. 쿼리 전체의 exact/prefix 매치 (fuzzy 제외)
+2. 공백을 없앤 쿼리의 exact/prefix 매치 (`커피 수혈` → `커피수혈`)
+3. 불용어를 뺀 각 단어를 단일 쿼리처럼 채점한 점수의 평균 — 더 많은 단어와 매치될수록 상위
 
 ## Korean Choseong
 

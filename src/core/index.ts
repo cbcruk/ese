@@ -1,6 +1,7 @@
 import { buildIndex, expandChoseongVariants, type SearchIndex } from './builder.js'
 import { containsCompatJamo, matchesHangulWord } from './hangul.js'
 import { levenshteinCapped } from './levenshtein.js'
+import { tokenizeQuery } from './query-tokens.js'
 
 /**
  * A single emoji match returned by {@link SearchCore.query}.
@@ -171,41 +172,59 @@ export class SearchCore {
     }
 
     const query = input.toLowerCase()
-    const queryByteLength = this.encoder.encode(query).length
+    const tokens = tokenizeQuery(query)
+    const isMultiWord = tokens.length > 1 || tokens[0] !== query
+    const { scores, conceptPosition } = this.scoreTerm(query, !isMultiWord)
 
-    const scores = new Map<number, number>()
-
-    this.exactMatch(query, scores)
-    this.prefixMatch(query, scores)
-
-    if (this.typoTolerance >= 1 && queryByteLength >= 3) {
-      this.fuzzyMatch(query, 1, 0.6, scores)
-    }
-
-    if (this.typoTolerance >= 2 && queryByteLength >= 4 && scores.size < this.maxResults) {
-      this.fuzzyMatch(query, 2, 0.4, scores)
-    }
-
-    // Curated emojis for the concept term the query exactly matches (if any),
-    // used to lift them above emojis that merely share the keyword.
+    // Multi-word queries (`치킨 땡긴다`, `so hot`) rarely match a keyword as a
+    // whole, so each content word is also scored on its own. An emoji's token
+    // score is the mean over words, so matching more words ranks higher, and
+    // it keeps whichever of its whole-query and token scores is better.
     //
-    // 쿼리가 정확히 일치하는 개념어의 큐레이션 이모지(있으면) — 키워드만
-    // 공유하는 이모지 위로 올리는 데 사용.
-    const conceptIds = this.index.conceptLookup.get(query)
-    const conceptPosition = new Map(conceptIds?.map((id, i) => [id, i]))
+    // 여러 단어 쿼리(`치킨 땡긴다`, `so hot`)는 통째로 키워드와 매치되는 경우가
+    // 드물어, 의미 있는 단어마다 따로 채점. 이모지의 단어 점수는 단어별 점수의
+    // 평균이라 더 많은 단어와 매치될수록 상위에 오며, 전체 쿼리 점수와 단어
+    // 점수 중 더 나은 쪽을 유지.
+    //
+    // The whole multi-word query skips fuzzy matching, since each word is
+    // matched fuzzily anyway. Instead it is also tried with spaces removed,
+    // because Korean spacing varies (`커피 수혈` → `커피수혈`).
+    //
+    // 여러 단어 쿼리 전체에는 fuzzy 매칭을 생략 — 각 단어가 어차피 fuzzy로
+    // 매칭되므로. 대신 한국어 띄어쓰기가 제각각이라 공백을 없앤 형태로도 매칭
+    // (`커피 수혈` → `커피수혈`).
+    if (isMultiWord) {
+      const joined = this.scoreTerm(query.replace(/\s+/g, ''), false)
 
-    const ranked: Array<[number, number]> = []
-    for (const [id, score] of scores) {
-      const entry = this.index.emojis[id]
-      const name = entry.name.toLowerCase()
-      let boost = name === query ? 0.05 : name.includes(query) ? 0.02 : 0
-      if (matchesHangulWord(query, entry.koName)) boost += KO_NAME_BOOST
-      if (conceptPosition.has(id)) boost += CONCEPT_BOOST
-      ranked.push([id, score + boost])
+      for (const [id, score] of joined.scores) {
+        if (score > (scores.get(id) ?? 0)) scores.set(id, score)
+      }
+      for (const [id, position] of joined.conceptPosition) {
+        conceptPosition.set(id, Math.min(conceptPosition.get(id) ?? position, position))
+      }
+
+      const tokenSums = new Map<number, number>()
+
+      for (const token of tokens) {
+        const term = this.scoreTerm(token, true)
+
+        for (const [id, score] of term.scores) {
+          tokenSums.set(id, (tokenSums.get(id) ?? 0) + score)
+        }
+        for (const [id, position] of term.conceptPosition) {
+          conceptPosition.set(id, Math.min(conceptPosition.get(id) ?? position, position))
+        }
+      }
+
+      for (const [id, sum] of tokenSums) {
+        const score = sum / tokens.length
+        if (score > (scores.get(id) ?? 0)) scores.set(id, score)
+      }
     }
+
     const { popularityRank } = this.index
     const curatedOrder = (id: number): number => conceptPosition.get(id) ?? Infinity
-    ranked.sort(
+    const ranked = [...scores].sort(
       (a, b) =>
         b[1] - a[1] ||
         curatedOrder(a[0]) - curatedOrder(b[0]) ||
@@ -217,6 +236,58 @@ export class SearchCore {
       const e = this.index.emojis[id]
       return { emoji: e.emoji, name: e.name, group: e.group, score }
     })
+  }
+
+  /**
+   * Scores every emoji matching a single term through the match tiers (fuzzy
+   * tiers only when `fuzzy` is set) and ranking boosts, and returns the curated position of each emoji in the
+   * concept the term exactly matches (empty when none).
+   *
+   * 단일 term에 매치되는 모든 이모지를 매칭 티어(`fuzzy`일 때만 fuzzy 티어
+   * 포함)와 랭킹 가산점으로 채점하고,
+   * term이 정확히 일치하는 개념어 내 각 이모지의 큐레이션 위치(없으면 빈 맵)를
+   * 함께 반환.
+   */
+  private scoreTerm(
+    term: string,
+    fuzzy: boolean,
+  ): {
+    scores: Map<number, number>
+    conceptPosition: Map<number, number>
+  } {
+    const termByteLength = this.encoder.encode(term).length
+    const matches = new Map<number, number>()
+
+    this.exactMatch(term, matches)
+    this.prefixMatch(term, matches)
+
+    if (fuzzy && this.typoTolerance >= 1 && termByteLength >= 3) {
+      this.fuzzyMatch(term, 1, 0.6, matches)
+    }
+
+    if (fuzzy && this.typoTolerance >= 2 && termByteLength >= 4 && matches.size < this.maxResults) {
+      this.fuzzyMatch(term, 2, 0.4, matches)
+    }
+
+    // Curated emojis for the concept term the query exactly matches (if any),
+    // used to lift them above emojis that merely share the keyword.
+    //
+    // 쿼리가 정확히 일치하는 개념어의 큐레이션 이모지(있으면) — 키워드만
+    // 공유하는 이모지 위로 올리는 데 사용.
+    const conceptIds = this.index.conceptLookup.get(term)
+    const conceptPosition = new Map(conceptIds?.map((id, i) => [id, i]))
+
+    const scores = new Map<number, number>()
+    for (const [id, score] of matches) {
+      const entry = this.index.emojis[id]
+      const name = entry.name.toLowerCase()
+      let boost = name === term ? 0.05 : name.includes(term) ? 0.02 : 0
+      if (matchesHangulWord(term, entry.koName)) boost += KO_NAME_BOOST
+      if (conceptPosition.has(id)) boost += CONCEPT_BOOST
+      scores.set(id, score + boost)
+    }
+
+    return { scores, conceptPosition }
   }
 
   private exactMatch(query: string, scores: Map<number, number>): void {
