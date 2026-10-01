@@ -46,3 +46,17 @@ describe('Korean search', () => {
     search.query('ㄱㅇㅈ')
   })
 })
+
+describe('Multi-word search', () => {
+  bench('two words (good luck)', () => {
+    search.query('good luck')
+  })
+
+  bench('two words (치킨 땡긴다)', () => {
+    search.query('치킨 땡긴다')
+  })
+
+  bench('stopword dropped (so hot)', () => {
+    search.query('so hot')
+  })
+})
