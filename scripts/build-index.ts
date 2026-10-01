@@ -20,7 +20,7 @@ function main(): void {
   const outFile = resolve(root, 'src/core/data.generated.ts')
 
   const inputs = loadInputs(root)
-  const table = buildEmojiTable(inputs.emojilib, inputs.meta)
+  const table = buildEmojiTable(inputs.emojilib, inputs.meta, inputs.koKeywords)
   const index = buildInvertedIndex(inputs, table)
   const fileContents = serializeAsTsModule(table, index)
   writeFileSync(outFile, fileContents)

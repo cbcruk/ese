@@ -6,9 +6,9 @@ import { serializeAsTsModule } from './serialize.ts'
 
 const sampleTable: EmojiTable = {
   emojis: [
-    ['🍎', 'red apple', 0],
-    ['🍏', 'green apple', 0],
-    ['🐶', 'dog', 1],
+    ['🍎', 'red apple', 0, '사과'],
+    ['🍏', 'green apple', 0, ''],
+    ['🐶', 'dog', 1, ''],
   ],
   emojiIdMap: new Map([
     ['🍎', 0],
@@ -19,8 +19,8 @@ const sampleTable: EmojiTable = {
 }
 
 const sampleIndex: InvertedIndex = {
-  keywords: ['apple', 'dog', 'red'],
-  postings: [[0, 1], [2], [0]],
+  keywords: ['apple', 'dog', 'red', '사과'],
+  postings: [[0, 1], [2], [0], [0]],
   conceptTerms: ['fruit'],
   conceptPostings: [[0, 1]],
 }
@@ -51,7 +51,11 @@ describe('serializeAsTsModule', () => {
     const parsed = JSON.parse(unescaped)
 
     expect(parsed.groups).toEqual(sampleTable.groups)
-    expect(parsed.emojis).toEqual(sampleTable.emojis)
+    expect(parsed.emojis).toEqual([
+      ['🍎', 'red apple', 0, 3],
+      ['🍏', 'green apple', 0, -1],
+      ['🐶', 'dog', 1, -1],
+    ])
     expect(decodeFrontCoded(parsed.keywordsFC)).toEqual(sampleIndex.keywords)
     expect(decodePostings(parsed.postingsDV, sampleIndex.keywords.length)).toEqual(
       sampleIndex.postings,
@@ -70,7 +74,7 @@ describe('serializeAsTsModule', () => {
 
   test('escapes single quotes inside string values', () => {
     const tableWithApostrophe: EmojiTable = {
-      emojis: [['🍎', "won't", 0]],
+      emojis: [['🍎', "won't", 0, '']],
       emojiIdMap: new Map([['🍎', 0]]),
       groups: ["food'n'drink"],
     }

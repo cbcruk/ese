@@ -14,6 +14,9 @@ import type { InvertedIndex } from './build-inverted-index.ts'
  *   in a sorted dictionary.
  * - **Delta + varint postings** (`postingsDV`) — sorted ID lists stored
  *   as base64-packed LEB128 varints over consecutive deltas.
+ * - **Korean names by reference** — each emoji's `koName` is stored as its
+ *   index in the keyword list (`-1` when absent), since Hangul text barely
+ *   compresses and the keyword list already contains it.
  *
  * See `src/core/data-codec.ts` for the matching decoders.
  *
@@ -27,15 +30,24 @@ import type { InvertedIndex } from './build-inverted-index.ts'
  *   `[공유prefix길이, 나머지]` 튜플로 저장. 정렬된 사전의 prefix 중복을 활용.
  * - **Delta + varint postings** (`postingsDV`) — 정렬된 ID 리스트를 연속
  *   차이값에 대한 base64-packed LEB128 varint로 저장.
+ * - **한국어 대표명 참조** — 각 이모지의 `koName`을 키워드 목록 내 인덱스로
+ *   저장(없으면 `-1`). 한글 텍스트는 거의 압축되지 않고, 키워드 목록에 이미
+ *   포함되어 있으므로.
  *
  * 짝이 되는 디코더는 `src/core/data-codec.ts` 참조.
  *
  * @see https://v8.dev/blog/cost-of-javascript-2019
  */
 export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): string {
+  const keywordIds = new Map(index.keywords.map((kw, i) => [kw, i]))
   const payload = JSON.stringify({
     groups: table.groups,
-    emojis: table.emojis,
+    emojis: table.emojis.map(([emoji, name, groupId, koName]) => [
+      emoji,
+      name,
+      groupId,
+      keywordIds.get(koName) ?? -1,
+    ]),
     keywordsFC: encodeFrontCoded(index.keywords),
     postingsDV: encodePostings(index.postings),
     conceptTermsFC: encodeFrontCoded(index.conceptTerms),
@@ -48,7 +60,7 @@ export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): st
 
 interface RawData {
   groups: string[];
-  emojis: Array<[emoji: string, name: string, groupId: number]>;
+  emojis: Array<[emoji: string, name: string, groupId: number, koNameId: number]>;
   keywordsFC: Array<[sharedPrefixLen: number, suffix: string]>;
   postingsDV: string;
   conceptTermsFC: Array<[sharedPrefixLen: number, suffix: string]>;

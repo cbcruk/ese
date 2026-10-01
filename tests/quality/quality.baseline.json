@@ -21,13 +21,13 @@
     "hitAt1": 0.8667,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.9333
+    "mrr": 0.9222
   },
   "Korean choseong": {
     "hitAt1": 0.5,
     "hitAt5": 0.9,
     "recall": 1,
-    "mrr": 0.7167
+    "mrr": 0.6676
   },
   "Korean partial choseong": {
     "hitAt1": 0.8,
@@ -42,27 +42,39 @@
     "mrr": 0.7667
   },
   "Concept (Korean)": {
-    "hitAt1": 0.5714,
+    "hitAt1": 0.4286,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.7619
+    "mrr": 0.6905
   },
   "Concept (Korean choseong)": {
-    "hitAt1": 0.5,
-    "hitAt5": 1,
+    "hitAt1": 0,
+    "hitAt5": 0.5,
     "recall": 1,
-    "mrr": 0.75
+    "mrr": 0.1313
   },
   "Intent (English)": {
-    "hitAt1": 0.36,
-    "hitAt5": 0.52,
-    "recall": 0.52,
-    "mrr": 0.4113
+    "hitAt1": 0.6,
+    "hitAt5": 0.84,
+    "recall": 0.84,
+    "mrr": 0.7033
   },
   "Intent (Korean)": {
-    "hitAt1": 0.2,
-    "hitAt5": 0.32,
-    "recall": 0.32,
-    "mrr": 0.26
+    "hitAt1": 0.72,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.8533
+  },
+  "Held-out intent (English)": {
+    "hitAt1": 0.6333,
+    "hitAt5": 0.8333,
+    "recall": 0.8333,
+    "mrr": 0.7278
+  },
+  "Held-out intent (Korean)": {
+    "hitAt1": 0.475,
+    "hitAt5": 0.7,
+    "recall": 0.75,
+    "mrr": 0.5932
   }
 }
