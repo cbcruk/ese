@@ -89,6 +89,23 @@ export function decodePostings(b64: string, count: number): number[][] {
 }
 
 /**
+ * Restores lists stored sorted to their original order, using the digits
+ * produced by `encodeListOrder` at build time.
+ *
+ * 정렬 상태로 저장된 리스트를 빌드 타임 `encodeListOrder`가 만든 숫자로
+ * 원래 순서로 복원.
+ */
+export function restoreListOrder(sorted: number[][], order: string): number[][] {
+  let pos = 0
+
+  return sorted.map((list) => {
+    const out = new Array<number>(list.length)
+    for (const id of list) out[parseInt(order[pos++], 36)] = id
+    return out
+  })
+}
+
+/**
  * Cross-runtime base64 → byte array. `atob` is part of the WHATWG spec
  * and is globally available in browsers and Node ≥ 16.
  *

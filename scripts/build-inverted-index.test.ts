@@ -9,6 +9,7 @@ function makeInputs(partial: Partial<RawInputs>): RawInputs {
     meta: {},
     koKeywords: {},
     concepts: {},
+    frequency: [],
     ...partial,
   }
 }
@@ -153,9 +154,10 @@ describe('buildInvertedIndex', () => {
     expect(ci).toBeGreaterThanOrEqual(0)
     expect(index.conceptTerms.length).toBe(index.conceptPostings.length)
     // Only the curated 🎉🥳 — 🎂 (incidental keyword) must not appear.
-    expect(index.conceptPostings[ci]).toEqual(
-      [table.emojiIdMap.get('🎉')!, table.emojiIdMap.get('🥳')!].sort((a, b) => a - b),
-    )
+    expect(index.conceptPostings[ci]).toEqual([
+      table.emojiIdMap.get('🎉')!,
+      table.emojiIdMap.get('🥳')!,
+    ])
     expect(index.conceptPostings[ci]).not.toContain(table.emojiIdMap.get('🎂')!)
   })
 
@@ -167,5 +169,19 @@ describe('buildInvertedIndex', () => {
     const index = buildInvertedIndex(inputs, table)
 
     expect(index.keywords.length).toBe(index.postings.length)
+  })
+
+  test('concept postings keep curated order', () => {
+    const inputs = makeInputs({
+      emojilib: { '🎉': [], '🥳': [] },
+      concepts: { party: ['🥳', '🎉'] },
+    })
+    const table = buildEmojiTable(inputs.emojilib, inputs.meta)
+    const index = buildInvertedIndex(inputs, table)
+
+    expect(index.conceptPostings[0]).toEqual([
+      table.emojiIdMap.get('🥳')!,
+      table.emojiIdMap.get('🎉')!,
+    ])
   })
 })

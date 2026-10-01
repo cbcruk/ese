@@ -19,10 +19,10 @@ export interface InvertedIndex {
   conceptTerms: string[]
   /**
    * Parallel to {@link conceptTerms}: the curated emoji IDs each concept term
-   * maps to (sorted ascending).
+   * maps to, in curated order (best fit first).
    *
    * {@link conceptTerms}와 동일 인덱스로 매칭 — 각 개념어가 매핑하는 큐레이션
-   * 이모지 ID들(오름차순 정렬).
+   * 이모지 ID들, 큐레이션 순서(가장 잘 맞는 것 먼저).
    */
   conceptPostings: number[][]
 }
@@ -152,17 +152,17 @@ export function buildInvertedIndex(inputs: RawInputs, table: EmojiTable): Invert
   }
 
   // Finalize: sort keywords lexicographically (for binary-search prefix
-  // scans at runtime), sort+dedupe each posting list. The concept map is
-  // finalized the same way — sorted terms, sorted id lists.
+  // scans at runtime), sort+dedupe each posting list. Concept terms are
+  // sorted too, but their id lists keep curated order for tie-breaking.
   //
   // 마무리: 키워드를 lexicographic 정렬(런타임에서 binary-search prefix
-  // 스캔용), 각 posting list도 정렬 + dedup. concept 맵도 동일하게 마무리 —
-  // 개념어 정렬, id 리스트 정렬.
+  // 스캔용), 각 posting list도 정렬 + dedup. 개념어도 정렬하되, id 리스트는
+  // 동점 처리를 위해 큐레이션 순서 유지.
   const keywords = [...keywordToIds.keys()].sort()
   const postings = keywords.map((kw) => [...keywordToIds.get(kw)!].sort((a, b) => a - b))
 
   const conceptTerms = [...conceptToIds.keys()].sort()
-  const conceptPostings = conceptTerms.map((t) => [...conceptToIds.get(t)!].sort((a, b) => a - b))
+  const conceptPostings = conceptTerms.map((t) => [...conceptToIds.get(t)!])
 
   return { keywords, postings, conceptTerms, conceptPostings }
 }

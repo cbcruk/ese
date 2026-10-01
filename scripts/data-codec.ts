@@ -52,6 +52,30 @@ export function encodePostings(postings: number[][]): string {
   return Buffer.from(bytes).toString('base64')
 }
 
+/**
+ * Encodes the original order of each list as one base-36 digit per element,
+ * so lists can be stored sorted (for {@link encodePostings}) and restored.
+ *
+ * 각 리스트의 원래 순서를 원소당 base-36 숫자 하나로 인코딩 — 리스트를
+ * 정렬된 상태로 저장({@link encodePostings}용)한 뒤 원래 순서로 복원 가능.
+ *
+ * @param lists Lists in their original order, each at most 36 long.
+ * @returns For each list sorted ascending, the original position of each
+ * element, concatenated across lists.
+ */
+export function encodeListOrder(lists: number[][]): string {
+  let out = ''
+
+  for (const list of lists) {
+    if (list.length > 36) throw new Error(`List too long to encode order: ${list.length}`)
+
+    const sorted = [...list].sort((a, b) => a - b)
+    for (const id of sorted) out += list.indexOf(id).toString(36)
+  }
+
+  return out
+}
+
 function pushVarint(out: number[], n: number): void {
   while (n >= 0x80) {
     out.push((n & 0x7f) | 0x80)

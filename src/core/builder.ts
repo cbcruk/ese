@@ -1,10 +1,12 @@
-import { decodeFrontCoded, decodePostings } from './data-codec.js'
+import { decodeFrontCoded, decodePostings, restoreListOrder } from './data-codec.js'
 import {
+  conceptOrder,
   conceptPostingsDV,
   conceptTermsFC,
   emojis as RAW_EMOJIS,
   groups,
   keywordsFC,
+  popularity,
   postingsDV,
 } from './data.generated.js'
 import { generateVariants } from './hangul.js'
@@ -43,7 +45,7 @@ export interface SearchIndex {
    */
   exactLookup: Map<string, number>
   /**
-   * Concept term → curated emoji IDs. Consulted when a query exactly matches
+   * Concept term → curated emoji IDs in curated order. Consulted when a query exactly matches
    * a concept term to give those curated emojis a ranking boost, so they lead
    * a concept query rather than tying with emojis that merely share the
    * keyword. See `data/concepts.json`.
@@ -53,6 +55,14 @@ export interface SearchIndex {
    * 동점이 되는 대신 개념 쿼리 상단을 차지하게 함. `data/concepts.json` 참고.
    */
   conceptLookup: Map<string, number[]>
+  /**
+   * Popularity rank per emoji ID, `0` for the most frequently used emoji.
+   * Emojis without frequency data share the last rank. Breaks score ties.
+   *
+   * 이모지 ID별 인기 순위(가장 많이 쓰이는 이모지가 `0`). 빈도 데이터가 없는
+   * 이모지는 모두 마지막 순위. 점수 동점 처리에 사용.
+   */
+  popularityRank: Uint16Array
   /**
    * `true` once {@link expandChoseongVariants} has merged Hangul choseong
    * variants into {@link keywords} / {@link postings} / {@link exactLookup}.
@@ -93,11 +103,20 @@ export function buildIndex(): SearchIndex {
   }
 
   const conceptTerms = decodeFrontCoded(conceptTermsFC)
-  const conceptPostings = decodePostings(conceptPostingsDV, conceptTerms.length)
+  const conceptPostings = restoreListOrder(
+    decodePostings(conceptPostingsDV, conceptTerms.length),
+    conceptOrder,
+  )
   const conceptLookup = new Map<string, number[]>()
 
   for (let i = 0; i < conceptTerms.length; i++) {
     conceptLookup.set(conceptTerms[i], conceptPostings[i])
+  }
+
+  const popularityRank = new Uint16Array(emojiEntries.length).fill(popularity.length)
+
+  for (let rank = 0; rank < popularity.length; rank++) {
+    popularityRank[popularity[rank]] = rank
   }
 
   cached = {
@@ -106,6 +125,7 @@ export function buildIndex(): SearchIndex {
     postings,
     exactLookup,
     conceptLookup,
+    popularityRank,
     choseongExpanded: false,
   }
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 
 import { buildEmojiTable } from './build-emoji-table.ts'
 import { buildInvertedIndex } from './build-inverted-index.ts'
+import { buildPopularityOrder } from './build-popularity-order.ts'
 import { loadInputs } from './load-inputs.ts'
 import { serializeAsTsModule } from './serialize.ts'
 
@@ -22,7 +23,8 @@ function main(): void {
   const inputs = loadInputs(root)
   const table = buildEmojiTable(inputs.emojilib, inputs.meta, inputs.koKeywords)
   const index = buildInvertedIndex(inputs, table)
-  const fileContents = serializeAsTsModule(table, index)
+  const popularity = buildPopularityOrder(inputs.frequency, table)
+  const fileContents = serializeAsTsModule(table, index, popularity)
   writeFileSync(outFile, fileContents)
   const payloadKB = (fileContents.length / 1024).toFixed(1)
 

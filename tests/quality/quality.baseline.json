@@ -3,78 +3,78 @@
     "hitAt1": 0.6667,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.7633
+    "mrr": 0.8056
   },
   "Typo (distance 1)": {
-    "hitAt1": 0.2,
-    "hitAt5": 0.6,
-    "recall": 1,
-    "mrr": 0.3766
-  },
-  "Typo (distance 2)": {
     "hitAt1": 0.4,
-    "hitAt5": 0.8,
-    "recall": 1,
-    "mrr": 0.55
-  },
-  "Korean exact": {
-    "hitAt1": 0.8667,
-    "hitAt5": 1,
-    "recall": 1,
-    "mrr": 0.9222
-  },
-  "Korean choseong": {
-    "hitAt1": 0.5,
     "hitAt5": 0.9,
     "recall": 1,
-    "mrr": 0.6676
+    "mrr": 0.6367
   },
-  "Korean partial choseong": {
+  "Typo (distance 2)": {
+    "hitAt1": 0.6,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.8
+  },
+  "Korean exact": {
     "hitAt1": 0.8,
     "hitAt5": 1,
     "recall": 1,
     "mrr": 0.9
   },
-  "Concept (English)": {
-    "hitAt1": 0.6,
+  "Korean choseong": {
+    "hitAt1": 0.7,
+    "hitAt5": 0.9,
+    "recall": 1,
+    "mrr": 0.7917
+  },
+  "Korean partial choseong": {
+    "hitAt1": 1,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.7667
+    "mrr": 1
+  },
+  "Concept (English)": {
+    "hitAt1": 0.9,
+    "hitAt5": 1,
+    "recall": 1,
+    "mrr": 0.95
   },
   "Concept (Korean)": {
-    "hitAt1": 0.4286,
+    "hitAt1": 0.8571,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.6905
+    "mrr": 0.9286
   },
   "Concept (Korean choseong)": {
     "hitAt1": 0,
     "hitAt5": 0.5,
     "recall": 1,
-    "mrr": 0.1313
+    "mrr": 0.1294
   },
   "Intent (English)": {
-    "hitAt1": 0.6,
+    "hitAt1": 0.72,
     "hitAt5": 0.84,
     "recall": 0.84,
-    "mrr": 0.7033
+    "mrr": 0.77
   },
   "Intent (Korean)": {
-    "hitAt1": 0.72,
+    "hitAt1": 0.96,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.8533
+    "mrr": 0.9733
   },
   "Held-out intent (English)": {
-    "hitAt1": 0.6333,
+    "hitAt1": 0.7667,
     "hitAt5": 0.8333,
     "recall": 0.8333,
-    "mrr": 0.7278
+    "mrr": 0.8
   },
   "Held-out intent (Korean)": {
-    "hitAt1": 0.475,
-    "hitAt5": 0.7,
-    "recall": 0.75,
-    "mrr": 0.5932
+    "hitAt1": 0.625,
+    "hitAt5": 0.775,
+    "recall": 0.775,
+    "mrr": 0.6733
   }
 }
