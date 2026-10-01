@@ -13,7 +13,7 @@ Fuzzy emoji search engine with Levenshtein matching and Korean choseong (초성)
 - **Concept search** — `축하`/`celebration` → 🎉, `졸림`/`sleepy` → 😴 처럼 감정·상황 개념어로 검색. 큐레이션된 매핑(한/영)이라 임베딩·네트워크 없이 오프라인 유지
 - **Pre-built index** — ~2K emojis · ~11K keywords가 번들에 임베드 (한국어 초성 변형 ~7K개는 런타임에 확장). cold start ~3ms
 - **Personalization** — recency + frequency 기반 자동 boost
-- **Tiny** — ~120KB gzipped (코드 + 인덱스 데이터)
+- **Tiny** — ~125KB gzipped (코드 + 인덱스 데이터)
 - **Pure TypeScript** — native 의존성 없음, 브라우저 호환
 
 ## Install
@@ -87,6 +87,7 @@ interface SearchResult {
 
 - 이름 매치 tie-breaking boost: 정확 일치 시 `+0.05`, 부분 포함 시 `+0.02`
 - 한국어 대표명(첫 번째 한국어 키워드) 매치 boost: 그대로 또는 초성으로 일치 시 `+0.05` (`강아지`/`ㄱㅇㅈ` → 🐶가 🐕🐩보다 상위)
+- 동점 처리: 개념어 쿼리는 큐레이션 순서(`hello` → 👋 먼저), 그 외에는 [Unicode 이모지 사용 빈도](https://home.unicode.org/emoji/emoji-frequency/) 순위가 높은 이모지가 먼저 (`ㅍㅈ` → 🍕가 ✉️🇫🇯보다 상위)
 - 개념 매치 boost: 쿼리가 개념어와 정확히 일치하면 해당 개념의 큐레이션 이모지에 `+0.10` (아래 [Concept Search](#concept-search) 참고)
 - 개인화 boost (recency + frequency): 최대 `+0.25`
 
@@ -124,6 +125,7 @@ interface SearchResult {
 - [`unicode-emoji-json`](https://github.com/muan/unicode-emoji-json) — 이모지 메타데이터 (이름, 그룹)
 - `data/ko-keywords.json` — 한국어 키워드 매핑 (~1,900개 이모지, LLM 생성 초안)
 - `data/concepts.json` — 개념어(한/영) → 이모지 매핑 (~590개 개념, LLM 생성 초안)
+- `data/emoji-frequency.json` — [Unicode Emoji Frequency (2019)](https://home.unicode.org/emoji/emoji-frequency/) 순위, 동점 처리용. © Unicode, Inc., [Unicode License](data/emoji-frequency.LICENSE.txt)
 
 ## Development
 

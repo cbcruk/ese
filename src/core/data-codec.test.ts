@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { encodeFrontCoded, encodePostings } from '../../scripts/data-codec.ts'
-import { decodeFrontCoded, decodePostings } from './data-codec.ts'
+import { encodeFrontCoded, encodeListOrder, encodePostings } from '../../scripts/data-codec.ts'
+import { decodeFrontCoded, decodePostings, restoreListOrder } from './data-codec.ts'
 
 describe('front-coding roundtrip', () => {
   test('empty array', () => {
@@ -70,5 +70,13 @@ describe('delta+varint postings roundtrip', () => {
   test('large delta between consecutive IDs', () => {
     const input = [[0, 1913]]
     expect(decodePostings(encodePostings(input), 1)).toEqual(input)
+  })
+})
+
+describe('list order roundtrip', () => {
+  test('restores the original order of lists stored sorted', () => {
+    const lists = [[30, 2, 17], [], [5], [9, 1]]
+    const sorted = lists.map((l) => [...l].sort((a, b) => a - b))
+    expect(restoreListOrder(sorted, encodeListOrder(lists))).toEqual(lists)
   })
 })

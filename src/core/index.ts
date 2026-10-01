@@ -72,7 +72,9 @@ export interface SearchCoreOptions {
  * so an emoji matched by a higher tier keeps its better score. Names
  * matching the query receive a small boost for tie-breaking, as do Korean
  * display names matched in full or by choseong (see
- * {@link KO_NAME_BOOST}). When the query
+ * {@link KO_NAME_BOOST}). Remaining ties follow the concept's curated order,
+ * then go to the more frequently used emoji per Unicode's emoji frequency
+ * ranking. When the query
  * exactly matches a concept term (e.g. `celebration`, `축하`), that concept's
  * curated emojis receive a larger {@link CONCEPT_BOOST} so they lead the
  * results instead of tying with emojis that merely share the keyword.
@@ -95,7 +97,9 @@ export interface SearchCoreOptions {
  * 각 티어는 "first wins" 방식으로 공유 score 맵에 기록 — 상위 티어가 매치한
  * 이모지는 더 좋은 점수를 유지. 이름이 쿼리와 매치되는 경우 tie-breaking용
  * 작은 boost 추가 — 한국어 대표명이 그대로 또는 초성으로 매치되는 경우도
- * 동일({@link KO_NAME_BOOST} 참고).
+ * 동일({@link KO_NAME_BOOST} 참고). 남은 동점은 개념어의 큐레이션 순서를
+ * 따르고, 그다음 Unicode 이모지 사용 빈도 순위상 더 많이 쓰이는 이모지가
+ * 앞에 옴.
  *
  * Levenshtein 거리는 UTF-16 code unit 단위 (BMP 영역 코드포인트는 Unicode
  * 문자 단위와 동일 — 한글 음절을 포함한 모든 이모지 키워드가 BMP에 속함).
@@ -188,7 +192,7 @@ export class SearchCore {
     // 쿼리가 정확히 일치하는 개념어의 큐레이션 이모지(있으면) — 키워드만
     // 공유하는 이모지 위로 올리는 데 사용.
     const conceptIds = this.index.conceptLookup.get(query)
-    const conceptSet = conceptIds ? new Set(conceptIds) : null
+    const conceptPosition = new Map(conceptIds?.map((id, i) => [id, i]))
 
     const ranked: Array<[number, number]> = []
     for (const [id, score] of scores) {
@@ -196,10 +200,17 @@ export class SearchCore {
       const name = entry.name.toLowerCase()
       let boost = name === query ? 0.05 : name.includes(query) ? 0.02 : 0
       if (matchesHangulWord(query, entry.koName)) boost += KO_NAME_BOOST
-      if (conceptSet?.has(id)) boost += CONCEPT_BOOST
+      if (conceptPosition.has(id)) boost += CONCEPT_BOOST
       ranked.push([id, score + boost])
     }
-    ranked.sort((a, b) => b[1] - a[1])
+    const { popularityRank } = this.index
+    const curatedOrder = (id: number): number => conceptPosition.get(id) ?? Infinity
+    ranked.sort(
+      (a, b) =>
+        b[1] - a[1] ||
+        curatedOrder(a[0]) - curatedOrder(b[0]) ||
+        popularityRank[a[0]] - popularityRank[b[0]],
+    )
     ranked.length = Math.min(ranked.length, this.maxResults)
 
     return ranked.map(([id, score]) => {

@@ -1,4 +1,4 @@
-import { encodeFrontCoded, encodePostings } from './data-codec.ts'
+import { encodeFrontCoded, encodeListOrder, encodePostings } from './data-codec.ts'
 import type { EmojiTable } from './build-emoji-table.ts'
 import type { InvertedIndex } from './build-inverted-index.ts'
 
@@ -14,6 +14,9 @@ import type { InvertedIndex } from './build-inverted-index.ts'
  *   in a sorted dictionary.
  * - **Delta + varint postings** (`postingsDV`) — sorted ID lists stored
  *   as base64-packed LEB128 varints over consecutive deltas.
+ * - **Curated concept order** (`conceptOrder`) — concept postings are
+ *   stored sorted for delta encoding, plus one digit per ID giving its
+ *   curated position.
  * - **Korean names by reference** — each emoji's `koName` is stored as its
  *   index in the keyword list (`-1` when absent), since Hangul text barely
  *   compresses and the keyword list already contains it.
@@ -30,6 +33,8 @@ import type { InvertedIndex } from './build-inverted-index.ts'
  *   `[공유prefix길이, 나머지]` 튜플로 저장. 정렬된 사전의 prefix 중복을 활용.
  * - **Delta + varint postings** (`postingsDV`) — 정렬된 ID 리스트를 연속
  *   차이값에 대한 base64-packed LEB128 varint로 저장.
+ * - **개념어 큐레이션 순서** (`conceptOrder`) — 개념어 postings는 delta
+ *   인코딩을 위해 정렬해 저장하고, ID마다 큐레이션 위치를 숫자 하나로 기록.
  * - **한국어 대표명 참조** — 각 이모지의 `koName`을 키워드 목록 내 인덱스로
  *   저장(없으면 `-1`). 한글 텍스트는 거의 압축되지 않고, 키워드 목록에 이미
  *   포함되어 있으므로.
@@ -38,7 +43,11 @@ import type { InvertedIndex } from './build-inverted-index.ts'
  *
  * @see https://v8.dev/blog/cost-of-javascript-2019
  */
-export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): string {
+export function serializeAsTsModule(
+  table: EmojiTable,
+  index: InvertedIndex,
+  popularity: number[] = [],
+): string {
   const keywordIds = new Map(index.keywords.map((kw, i) => [kw, i]))
   const payload = JSON.stringify({
     groups: table.groups,
@@ -51,7 +60,11 @@ export function serializeAsTsModule(table: EmojiTable, index: InvertedIndex): st
     keywordsFC: encodeFrontCoded(index.keywords),
     postingsDV: encodePostings(index.postings),
     conceptTermsFC: encodeFrontCoded(index.conceptTerms),
-    conceptPostingsDV: encodePostings(index.conceptPostings),
+    conceptPostingsDV: encodePostings(
+      index.conceptPostings.map((ids) => [...ids].sort((a, b) => a - b)),
+    ),
+    conceptOrder: encodeListOrder(index.conceptPostings),
+    popularity,
   })
   const escaped = payload.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 
@@ -65,6 +78,8 @@ interface RawData {
   postingsDV: string;
   conceptTermsFC: Array<[sharedPrefixLen: number, suffix: string]>;
   conceptPostingsDV: string;
+  conceptOrder: string;
+  popularity: number[];
 }
 
 const RAW = JSON.parse('${escaped}') as RawData;
@@ -75,5 +90,7 @@ export const keywordsFC = RAW.keywordsFC;
 export const postingsDV = RAW.postingsDV;
 export const conceptTermsFC = RAW.conceptTermsFC;
 export const conceptPostingsDV = RAW.conceptPostingsDV;
+export const conceptOrder = RAW.conceptOrder;
+export const popularity = RAW.popularity;
 `
 }
