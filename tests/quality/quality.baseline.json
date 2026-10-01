@@ -51,7 +51,7 @@
     "hitAt1": 0,
     "hitAt5": 0.5,
     "recall": 1,
-    "mrr": 0.1294
+    "mrr": 0.2794
   },
   "Intent (English)": {
     "hitAt1": 0.72,
