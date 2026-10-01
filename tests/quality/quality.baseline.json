@@ -18,16 +18,16 @@
     "mrr": 0.8
   },
   "Korean exact": {
-    "hitAt1": 0.8,
+    "hitAt1": 0.8667,
     "hitAt5": 1,
     "recall": 1,
-    "mrr": 0.9
+    "mrr": 0.9333
   },
   "Korean choseong": {
-    "hitAt1": 0.7,
+    "hitAt1": 0.6,
     "hitAt5": 0.9,
     "recall": 1,
-    "mrr": 0.7917
+    "mrr": 0.7417
   },
   "Korean partial choseong": {
     "hitAt1": 1,
@@ -51,7 +51,7 @@
     "hitAt1": 0,
     "hitAt5": 0.5,
     "recall": 1,
-    "mrr": 0.2794
+    "mrr": 0.2778
   },
   "Intent (English)": {
     "hitAt1": 0.84,

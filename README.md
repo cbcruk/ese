@@ -132,8 +132,8 @@ interface SearchResult {
 
 - [`emojilib`](https://github.com/muan/emojilib) — 영어 키워드
 - [`unicode-emoji-json`](https://github.com/muan/unicode-emoji-json) — 이모지 메타데이터 (이름, 그룹)
-- `data/ko-keywords.json` — 한국어 키워드 매핑 (~1,900개 이모지, LLM 생성 초안)
-- `data/concepts.json` — 개념어(한/영) → 이모지 매핑 (~590개 개념, LLM 생성 초안)
+- `data/ko-keywords.json` — 한국어 키워드 매핑 (~1,900개 이모지, LLM 생성 + 에이전트 검수)
+- `data/concepts.json` — 개념어(한/영) → 이모지 매핑 (~590개 개념, LLM 생성 + 에이전트 검수)
 - `data/emoji-frequency.json` — [Unicode Emoji Frequency (2019)](https://home.unicode.org/emoji/emoji-frequency/) 순위, 동점 처리용. © Unicode, Inc., [Unicode License](data/emoji-frequency.LICENSE.txt)
 
 ## Development
