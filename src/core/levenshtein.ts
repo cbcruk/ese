@@ -74,3 +74,84 @@ export function levenshteinCapped(a: string, b: string, max: number): number | n
 
   return dist <= max ? dist : null
 }
+
+/**
+ * Longest pattern {@link createLevenshteinMatcher} handles with bit-parallel
+ * matching — one bit per pattern character in a 32-bit integer.
+ *
+ * {@link createLevenshteinMatcher}가 비트 병렬로 처리하는 최대 패턴 길이 —
+ * 32비트 정수에 패턴 문자당 1비트.
+ */
+const MAX_BIT_PARALLEL_LENGTH = 32
+
+/**
+ * Compiles a pattern into a function returning its capped Levenshtein
+ * distance to a text, for scanning many texts against one pattern.
+ *
+ * Uses Myers' bit-parallel algorithm, which advances a whole DP column per
+ * text character with a handful of bitwise operations instead of filling it
+ * cell by cell. Patterns longer than {@link MAX_BIT_PARALLEL_LENGTH} fall
+ * back to {@link levenshteinCapped}. Results are identical either way.
+ *
+ * 하나의 패턴을 여러 텍스트와 비교할 때 쓰도록, 패턴을 텍스트까지의 capped
+ * Levenshtein 거리를 반환하는 함수로 컴파일.
+ *
+ * Myers 비트 병렬 알고리즘 사용 — DP 열을 셀 단위로 채우는 대신 텍스트
+ * 문자마다 비트 연산 몇 번으로 열 전체를 진행. {@link MAX_BIT_PARALLEL_LENGTH}
+ * 보다 긴 패턴은 {@link levenshteinCapped}로 fallback. 결과는 어느 쪽이든 동일.
+ *
+ * @example
+ * ```ts
+ * import { createLevenshteinMatcher } from './levenshtein.js'
+ *
+ * const distanceTo = createLevenshteinMatcher('aple')
+ * distanceTo('apple', 2) // 1
+ * distanceTo('banana', 2) // null
+ * ```
+ */
+export function createLevenshteinMatcher(
+  pattern: string,
+): (text: string, max: number) => number | null {
+  const m = pattern.length
+
+  if (m === 0 || m > MAX_BIT_PARALLEL_LENGTH) {
+    return (text, max) => levenshteinCapped(pattern, text, max)
+  }
+
+  const peq = new Map<number, number>()
+
+  for (let i = 0; i < m; i++) {
+    const code = pattern.charCodeAt(i)
+    peq.set(code, (peq.get(code) ?? 0) | (1 << i))
+  }
+
+  const lastBit = 1 << (m - 1)
+
+  return (text, max) => {
+    const n = text.length
+
+    if (Math.abs(m - n) > max) return null
+
+    let pv = -1
+    let mv = 0
+    let distance = m
+
+    for (let j = 0; j < n; j++) {
+      const eq = peq.get(text.charCodeAt(j)) ?? 0
+      const xv = eq | mv
+      const xh = (((eq & pv) + pv) ^ pv) | eq
+      let ph = mv | ~(xh | pv)
+      let mh = pv & xh
+
+      if (ph & lastBit) distance++
+      else if (mh & lastBit) distance--
+
+      ph = (ph << 1) | 1
+      mh <<= 1
+      pv = mh | ~(xv | ph)
+      mv = ph & xv
+    }
+
+    return distance <= max ? distance : null
+  }
+}

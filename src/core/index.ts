@@ -1,6 +1,6 @@
 import { buildIndex, expandChoseongVariants, type SearchIndex } from './builder.js'
 import { containsCompatJamo, matchesHangulWord } from './hangul.js'
-import { levenshteinCapped } from './levenshtein.js'
+import { createLevenshteinMatcher } from './levenshtein.js'
 import { tokenizeQuery } from './query-tokens.js'
 
 /**
@@ -320,14 +320,25 @@ export class SearchCore {
     score: number,
     scores: Map<number, number>,
   ): void {
-    const keywords = this.index.keywords
-    const postings = this.index.postings
+    const { keywords, postings, keywordsByLength } = this.index
+    const distanceTo = createLevenshteinMatcher(query)
+    const hits: number[] = []
+    const maxLength = Math.min(query.length + distance, keywordsByLength.length - 1)
 
-    for (let i = 0; i < keywords.length; i++) {
-      const d = levenshteinCapped(query, keywords[i], distance)
+    for (let length = Math.max(0, query.length - distance); length <= maxLength; length++) {
+      for (const i of keywordsByLength[length] ?? []) {
+        if (distanceTo(keywords[i], distance) !== null) hits.push(i)
+      }
+    }
 
-      if (d === null) continue
+    // Keyword order decides which emoji is inserted first, and insertion order
+    // settles ties that score and popularity leave open.
+    //
+    // 키워드 순서가 이모지 삽입 순서를 정하고, 점수와 인기 순위로도 남는 동점은
+    // 삽입 순서로 결정됨.
+    hits.sort((a, b) => a - b)
 
+    for (const i of hits) {
       for (const id of postings[i]) {
         if (!scores.has(id)) scores.set(id, score)
       }

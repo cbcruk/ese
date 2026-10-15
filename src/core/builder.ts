@@ -39,6 +39,15 @@ export interface SearchIndex {
    */
   postings: number[][]
   /**
+   * Keyword indices grouped by keyword length (UTF-16 code units), each group
+   * in ascending order. Lets fuzzy matching skip keywords whose length alone
+   * puts them out of edit-distance range.
+   *
+   * 키워드 길이(UTF-16 code unit)별로 묶은 키워드 인덱스, 각 묶음은 오름차순.
+   * fuzzy 매칭이 길이만으로 편집 거리 범위를 벗어나는 키워드를 건너뛰게 함.
+   */
+  keywordsByLength: number[][]
+  /**
    * Direct keyword → postings index lookup for exact match.
    *
    * Exact match를 위한 키워드 → postings 인덱스 직접 조회.
@@ -65,7 +74,8 @@ export interface SearchIndex {
   popularityRank: Uint16Array
   /**
    * `true` once {@link expandChoseongVariants} has merged Hangul choseong
-   * variants into {@link keywords} / {@link postings} / {@link exactLookup}.
+   * variants into {@link keywords} / {@link postings} / {@link exactLookup}
+   * / {@link keywordsByLength}.
    * Prevents duplicate expansion across instances sharing the cached index.
    *
    * {@link expandChoseongVariants}가 한글 초성 변형을 인덱스에 병합한 이후
@@ -123,6 +133,7 @@ export function buildIndex(): SearchIndex {
     emojis: emojiEntries,
     keywords,
     postings,
+    keywordsByLength: groupByLength(keywords),
     exactLookup,
     conceptLookup,
     popularityRank,
@@ -144,7 +155,8 @@ export function buildIndex(): SearchIndex {
  * almost never blocks user interaction.
  *
  * Idempotent — guarded by {@link SearchIndex.choseongExpanded}. Mutates
- * `keywords`, `postings`, and `exactLookup` to a new, larger sorted set.
+ * `keywords`, `postings`, `exactLookup`, and `keywordsByLength` to a new,
+ * larger sorted set.
  *
  * 한글 초성 변형을 인덱스에 in-place 확장. 번들된 payload에는 한국어
  * 원본 키워드(예: `"사과"`)만 들어 있으며, 사용자가 초성 일부로 검색할 수
@@ -156,7 +168,7 @@ export function buildIndex(): SearchIndex {
  * 블록하는 일이 거의 없음.
  *
  * Idempotent — {@link SearchIndex.choseongExpanded}로 가드. `keywords`,
- * `postings`, `exactLookup`을 더 큰 정렬된 집합으로 교체.
+ * `postings`, `exactLookup`, `keywordsByLength`를 더 큰 정렬된 집합으로 교체.
  */
 export function expandChoseongVariants(index: SearchIndex): void {
   if (index.choseongExpanded) return
@@ -215,5 +227,16 @@ export function expandChoseongVariants(index: SearchIndex): void {
   index.keywords = newKeywords
   index.postings = newPostings
   index.exactLookup = newExactLookup
+  index.keywordsByLength = groupByLength(newKeywords)
   index.choseongExpanded = true
+}
+
+function groupByLength(keywords: string[]): number[][] {
+  const groups: number[][] = []
+
+  for (let i = 0; i < keywords.length; i++) {
+    ;(groups[keywords[i].length] ??= []).push(i)
+  }
+
+  return groups
 }

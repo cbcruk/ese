@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { levenshteinCapped } from './levenshtein.js'
+import { createLevenshteinMatcher, levenshteinCapped } from './levenshtein.js'
 
 describe('levenshteinCapped', () => {
   test('two empty strings have distance 0', () => {
@@ -62,5 +62,49 @@ describe('levenshteinCapped', () => {
   test('boundary: distance equals cap exactly', () => {
     expect(levenshteinCapped('cat', 'dog', 3)).toBe(3)
     expect(levenshteinCapped('cat', 'dog', 2)).toBeNull()
+  })
+})
+
+describe('createLevenshteinMatcher', () => {
+  const words = [
+    'apple',
+    'aple',
+    'appel',
+    'apply',
+    'banana',
+    'kitten',
+    'sitting',
+    'a',
+    'ab',
+    'face',
+    'facepalm',
+    '사과',
+    '사람',
+    '강아지',
+    '강아치',
+    'ㅅㄱ',
+    'ㄱㅇㅈ',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  ]
+
+  test('agrees with levenshteinCapped for every pair and cap', () => {
+    for (const pattern of words) {
+      const distanceTo = createLevenshteinMatcher(pattern)
+      for (const text of words) {
+        for (const max of [0, 1, 2, 3]) {
+          expect(distanceTo(text, max), `${pattern} → ${text} (max ${max})`).toBe(
+            levenshteinCapped(pattern, text, max),
+          )
+        }
+      }
+    }
+  })
+
+  test('falls back for patterns longer than 32 characters', () => {
+    const distanceTo = createLevenshteinMatcher(`${'a'.repeat(40)}b`)
+    expect(distanceTo('a'.repeat(40), 1)).toBe(1)
+    expect(distanceTo('a'.repeat(38), 2)).toBeNull()
   })
 })
