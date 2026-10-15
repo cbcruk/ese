@@ -1,6 +1,6 @@
 import { buildIndex, expandChoseongVariants, type SearchIndex } from './builder.js'
 import { containsCompatJamo, matchesHangulWord } from './hangul.js'
-import { levenshteinCapped } from './levenshtein.js'
+import { createLevenshteinMatcher } from './levenshtein.js'
 import { tokenizeQuery } from './query-tokens.js'
 
 /**
@@ -66,8 +66,8 @@ export interface SearchCoreOptions {
  * |------|--------------------|-------|------------------|
  * | 1    | Exact              | 1.0   | 1                |
  * | 2    | Prefix             | 0.8   | 1                |
- * | 3    | Levenshtein dist 1 | 0.6   | 3 bytes          |
- * | 4    | Levenshtein dist 2 | 0.4   | 4 bytes          |
+ * | 3    | Levenshtein dist 1 | 0.6   | 3 characters     |
+ * | 4    | Levenshtein dist 2 | 0.4   | 4 characters     |
  *
  * Each tier writes into a shared score map using "first wins" semantics,
  * so an emoji matched by a higher tier keeps its better score. Names
@@ -92,8 +92,8 @@ export interface SearchCoreOptions {
  * |------|--------------------|-------|----------------|
  * | 1    | Exact              | 1.0   | 1              |
  * | 2    | Prefix             | 0.8   | 1              |
- * | 3    | Levenshtein dist 1 | 0.6   | 3 bytes        |
- * | 4    | Levenshtein dist 2 | 0.4   | 4 bytes        |
+ * | 3    | Levenshtein dist 1 | 0.6   | 3자            |
+ * | 4    | Levenshtein dist 2 | 0.4   | 4자            |
  *
  * 각 티어는 "first wins" 방식으로 공유 score 맵에 기록 — 상위 티어가 매치한
  * 이모지는 더 좋은 점수를 유지. 이름이 쿼리와 매치되는 경우 tie-breaking용
@@ -136,7 +136,6 @@ export class SearchCore {
   private index: SearchIndex
   private maxResults: number
   private typoTolerance: number
-  private encoder = new TextEncoder()
 
   constructor(options: SearchCoreOptions = {}) {
     this.index = buildIndex()
@@ -255,17 +254,24 @@ export class SearchCore {
     scores: Map<number, number>
     conceptPosition: Map<number, number>
   } {
-    const termByteLength = this.encoder.encode(term).length
+    // Gate fuzzy tiers on characters, not UTF-8 bytes: a Hangul syllable is 3
+    // bytes, so byte gating let `비` take one typo and `사과` two, matching
+    // thousands of unrelated keywords.
+    //
+    // fuzzy 티어 조건은 UTF-8 바이트가 아니라 글자 수 기준 — 한글 음절은
+    // 3바이트라 바이트 기준이면 `비`에 오타 1개, `사과`에 오타 2개가 허용되어
+    // 무관한 키워드 수천 개와 매치됨.
+    const termLength = term.length
     const matches = new Map<number, number>()
 
     this.exactMatch(term, matches)
     this.prefixMatch(term, matches)
 
-    if (fuzzy && this.typoTolerance >= 1 && termByteLength >= 3) {
+    if (fuzzy && this.typoTolerance >= 1 && termLength >= 3) {
       this.fuzzyMatch(term, 1, 0.6, matches)
     }
 
-    if (fuzzy && this.typoTolerance >= 2 && termByteLength >= 4 && matches.size < this.maxResults) {
+    if (fuzzy && this.typoTolerance >= 2 && termLength >= 4 && matches.size < this.maxResults) {
       this.fuzzyMatch(term, 2, 0.4, matches)
     }
 
@@ -320,14 +326,25 @@ export class SearchCore {
     score: number,
     scores: Map<number, number>,
   ): void {
-    const keywords = this.index.keywords
-    const postings = this.index.postings
+    const { keywords, postings, keywordsByLength } = this.index
+    const distanceTo = createLevenshteinMatcher(query)
+    const hits: number[] = []
+    const maxLength = Math.min(query.length + distance, keywordsByLength.length - 1)
 
-    for (let i = 0; i < keywords.length; i++) {
-      const d = levenshteinCapped(query, keywords[i], distance)
+    for (let length = Math.max(0, query.length - distance); length <= maxLength; length++) {
+      for (const i of keywordsByLength[length] ?? []) {
+        if (distanceTo(keywords[i], distance) !== null) hits.push(i)
+      }
+    }
 
-      if (d === null) continue
+    // Keyword order decides which emoji is inserted first, and insertion order
+    // settles ties that score and popularity leave open.
+    //
+    // 키워드 순서가 이모지 삽입 순서를 정하고, 점수와 인기 순위로도 남는 동점은
+    // 삽입 순서로 결정됨.
+    hits.sort((a, b) => a - b)
 
+    for (const i of hits) {
       for (const id of postings[i]) {
         if (!scores.has(id)) scores.set(id, score)
       }
