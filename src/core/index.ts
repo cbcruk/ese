@@ -66,8 +66,8 @@ export interface SearchCoreOptions {
  * |------|--------------------|-------|------------------|
  * | 1    | Exact              | 1.0   | 1                |
  * | 2    | Prefix             | 0.8   | 1                |
- * | 3    | Levenshtein dist 1 | 0.6   | 3 bytes          |
- * | 4    | Levenshtein dist 2 | 0.4   | 4 bytes          |
+ * | 3    | Levenshtein dist 1 | 0.6   | 3 characters     |
+ * | 4    | Levenshtein dist 2 | 0.4   | 4 characters     |
  *
  * Each tier writes into a shared score map using "first wins" semantics,
  * so an emoji matched by a higher tier keeps its better score. Names
@@ -92,8 +92,8 @@ export interface SearchCoreOptions {
  * |------|--------------------|-------|----------------|
  * | 1    | Exact              | 1.0   | 1              |
  * | 2    | Prefix             | 0.8   | 1              |
- * | 3    | Levenshtein dist 1 | 0.6   | 3 bytes        |
- * | 4    | Levenshtein dist 2 | 0.4   | 4 bytes        |
+ * | 3    | Levenshtein dist 1 | 0.6   | 3자            |
+ * | 4    | Levenshtein dist 2 | 0.4   | 4자            |
  *
  * 각 티어는 "first wins" 방식으로 공유 score 맵에 기록 — 상위 티어가 매치한
  * 이모지는 더 좋은 점수를 유지. 이름이 쿼리와 매치되는 경우 tie-breaking용
@@ -136,7 +136,6 @@ export class SearchCore {
   private index: SearchIndex
   private maxResults: number
   private typoTolerance: number
-  private encoder = new TextEncoder()
 
   constructor(options: SearchCoreOptions = {}) {
     this.index = buildIndex()
@@ -255,17 +254,24 @@ export class SearchCore {
     scores: Map<number, number>
     conceptPosition: Map<number, number>
   } {
-    const termByteLength = this.encoder.encode(term).length
+    // Gate fuzzy tiers on characters, not UTF-8 bytes: a Hangul syllable is 3
+    // bytes, so byte gating let `비` take one typo and `사과` two, matching
+    // thousands of unrelated keywords.
+    //
+    // fuzzy 티어 조건은 UTF-8 바이트가 아니라 글자 수 기준 — 한글 음절은
+    // 3바이트라 바이트 기준이면 `비`에 오타 1개, `사과`에 오타 2개가 허용되어
+    // 무관한 키워드 수천 개와 매치됨.
+    const termLength = term.length
     const matches = new Map<number, number>()
 
     this.exactMatch(term, matches)
     this.prefixMatch(term, matches)
 
-    if (fuzzy && this.typoTolerance >= 1 && termByteLength >= 3) {
+    if (fuzzy && this.typoTolerance >= 1 && termLength >= 3) {
       this.fuzzyMatch(term, 1, 0.6, matches)
     }
 
-    if (fuzzy && this.typoTolerance >= 2 && termByteLength >= 4 && matches.size < this.maxResults) {
+    if (fuzzy && this.typoTolerance >= 2 && termLength >= 4 && matches.size < this.maxResults) {
       this.fuzzyMatch(term, 2, 0.4, matches)
     }
 

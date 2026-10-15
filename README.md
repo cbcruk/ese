@@ -83,8 +83,10 @@ interface SearchResult {
 |------|--------------------|-------|----------------|
 | 1    | Exact              | 1.0   | 1              |
 | 2    | Prefix             | 0.8   | 1              |
-| 3    | Levenshtein dist 1 | 0.6   | 3 bytes        |
-| 4    | Levenshtein dist 2 | 0.4   | 4 bytes (fallback) |
+| 3    | Levenshtein dist 1 | 0.6   | 3자            |
+| 4    | Levenshtein dist 2 | 0.4   | 4자 (fallback) |
+
+최소 쿼리 길이는 글자 수 기준이라 한글 1~2음절(`비`, `사과`)과 초성 2자(`ㅅㄱ`)는 fuzzy 매칭 없이 exact/prefix로만 찾습니다.
 
 - 이름 매치 tie-breaking boost: 정확 일치 시 `+0.05`, 부분 포함 시 `+0.02`
 - 한국어 대표명(첫 번째 한국어 키워드) 매치 boost: 그대로 또는 초성으로 일치 시 `+0.05` (`강아지`/`ㄱㅇㅈ` → 🐶가 🐕🐩보다 상위)
